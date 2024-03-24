@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "NRG.Matrix.App": {
+      "commandName": "Project",
+      "commandLineArgs": "\"e => e / 200.0f\" \"e => System.Console.WindowWidth / 200.0f\""
+    }
+  }
+}

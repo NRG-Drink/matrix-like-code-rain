@@ -17,15 +17,5 @@ internal class Program
 		//var matrix = new Matrix(delay: 80, time: new TimeSpan(0, 0, 20));
 		var matrix = new Matrix(objectAddRate: e => 5);
 		matrix.Enter();
-
-		// Benchmark Mode.
-		//var matrix = new MatrixStruct(delay: 80, time: new TimeSpan(0, 0, 20));
-		//var matrix = new MatrixStruct(objectAddRate: e => 5);
-		//matrix.Enter();
-
-		// Benchmark Mode.
-		//var matrix = new MatrixClass(delay: 80, time: new TimeSpan(0, 0, 20));
-		//var matrix = new MatrixClass(objectAddRate: e => 5);
-		//matrix.Enter();
 	}
 }
