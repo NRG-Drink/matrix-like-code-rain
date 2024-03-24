@@ -1,23 +1,12 @@
-<<<<<<< HEAD
-﻿namespace NRG.Matrix.App;
-=======
 ﻿using CommandLine;
-using Microsoft.CodeAnalysis.CSharp.Scripting;
 using NRG.Matrix.App.Models;
 
 namespace NRG.Matrix.App;
->>>>>>> feat/config-via-args
 
 internal class Program
 {
 	static void Main(string[] args)
 	{
-<<<<<<< HEAD
-		// Benchmark Mode.
-		//var matrix = new Matrix(delay: 80, time: new TimeSpan(0, 0, 20));
-		var matrix = new Matrix();
-		matrix.Enter();
-=======
 		Parser.Default.ParseArguments<Option>(args)
 			.WithParsed(arg =>
 			{
@@ -38,6 +27,5 @@ internal class Program
 				var matrix = new Matrix();
 				matrix.Enter();
 			});
->>>>>>> feat/config-via-args
 	}
 }

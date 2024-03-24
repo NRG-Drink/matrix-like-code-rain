@@ -20,6 +20,7 @@ public class Matrix(int delay = 80, TimeSpan? time = null, int maxObjects = 9999
 		objectAddRate ??= e => e / 200.0f;
 		try
 		{
+			Console.Clear();
 			var sw = Stopwatch.StartNew();
 			while (_isEndlessMode || sw.Elapsed < time)
 			{
@@ -48,9 +49,7 @@ public class Matrix(int delay = 80, TimeSpan? time = null, int maxObjects = 9999
 			return;
 		}
 
-		//_objectBuildup += width / 200.0f;
 		_objectBuildup += objectAddRate!(width);
-
 		var objectsToAdd = (int)_objectBuildup;
         for (int i = 0; i < objectsToAdd; i++)
         {
