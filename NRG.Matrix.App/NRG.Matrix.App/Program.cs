@@ -1,4 +1,6 @@
-﻿using Microsoft.CodeAnalysis.CSharp.Scripting;
+﻿using CommandLine;
+using Microsoft.CodeAnalysis.CSharp.Scripting;
+using NRG.Matrix.App.Models;
 
 namespace NRG.Matrix.App;
 
@@ -6,16 +8,25 @@ internal class Program
 {
 	static void Main(string[] args)
 	{
-		var exString = args[1];
-		var expression = CSharpScript.EvaluateAsync<Func<int, float>>(exString).Result;
-
-		var one = expression(200);
-		var two = expression(400);
-		var twoHalf = expression(500);
-
-		// Benchmark Mode.
-		//var matrix = new Matrix(delay: 80, time: new TimeSpan(0, 0, 20));
-		var matrix = new Matrix(objectAddRate: e => 5);
-		matrix.Enter();
+		Parser.Default.ParseArguments<Option>(args)
+			.WithParsed(arg =>
+			{
+				var addRate = FunctionParser.ParseFuncOrNull<Func<int, float>>(arg.AddRate);
+				var matrix = new Matrix(
+					delay: arg.Delay,
+					time: arg.Time,
+					maxObjects: arg.MaxObjects,
+					objectAddRate: addRate
+					);
+				matrix.Enter();
+			})
+			.WithNotParsed(arg =>
+			{
+				Console.WriteLine("Arguments could not be parsed. Start with default values");
+				Task.Delay(3000).Wait();
+				Console.Clear();
+				var matrix = new Matrix();
+				matrix.Enter();
+			});
 	}
 }
