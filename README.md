@@ -3,23 +3,23 @@ Make your console enter the matrix!
 
 ![sample](https://github.com/NRG-Drink/matrix-like-code-rain/assets/123409068/0fd7b315-b394-493a-baba-2eb021cada74)
 
+## Install
+```cmd
+dotnet tool install --global NRG.Matrix
+```
 
 ## Start With Defaults
 ```cmd
-NRG.Matrix.App.exe
+matrix.enter
 ```
 
 ## Start With Parameters
 ```cmd
-NRG.Matrix.App.exe --delay 80 --time "00:00:20" --maxobjects 100 --addrate "e => 2"
+matrix.enter --delay 80 --add-rate 1 --max-objects 9999
 ```
 #### Delay
 This will set a pause in milliseconds (ms) between the frames.
-#### Time
-This will set a time after which the matrix-animation is stopped.  
-The time argument will also enter the benchmark mode with a performance summary at the end and a live count of the objects that are displayed. (object = char on screen)
 #### Max-Objects
-Will set the maximum number of objects. When the maximum number is reached, no more objects will be created. (object = char on screen)
+Will set the maximum number of objects. When the maximum number is reached, no more objects will be created. (object = falling drop)
 #### Add-Rate
-Any lambda function is valid `Func<int, float>`. Input is the current width of the window.
-By default the window width is devided by 200 ("e => e / 200").
+A factor to a function who depends on screen width. It has impact on the number of objects that are added to the screen on each frame.
