@@ -3,7 +3,7 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.10.34707.107
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NRG.Matrix.App", "NRG.Matrix.App\NRG.Matrix.App.csproj", "{8B4976A1-F760-4945-B0E8-10A618690D20}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NRG.Matrix", "NRG.Matrix\NRG.Matrix.csproj", "{8B4976A1-F760-4945-B0E8-10A618690D20}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
