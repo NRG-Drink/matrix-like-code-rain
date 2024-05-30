@@ -1,68 +1,59 @@
-﻿using System;
-using System.Diagnostics;
+﻿using NRG.Matrix.App.Models;
 using System.Text;
 
 namespace NRG.Matrix.App;
 
-public class Matrix(int delay = 80, TimeSpan? time = null, int maxObjects = 9999, Func<int, float>? objectAddRate = null)
+public class Matrix(Option option)
 {
-	private readonly bool _isEndlessMode = time is null;
-
-	private List<DisplayObject> list = [];
+	private List<DisplayObject> _displayObjects = [];
 	private (int Width, int Height) _windowDimension = (Console.WindowWidth, Console.WindowHeight);
-	private int _frames = 0;
-	private float _objectBuildup = 1;
 
+	private readonly float _addRate = option.AddRate;
+	private readonly int _delay = option.Delay < 0 ? 0 : option.Delay;
+	private readonly int _maxObjects = option.MaxObjects;
+	private float _objectBuildup = 1;
 
 	public void Enter()
 	{
-		delay = delay < 0 ? 0 : delay;
-		objectAddRate ??= e => e / 200.0f;
 		try
 		{
 			Console.Clear();
-			var sw = Stopwatch.StartNew();
-			while (_isEndlessMode || sw.Elapsed < time)
+			while (true)
 			{
 				AddObjects(Console.WindowWidth);
 				HandleObjects(Console.WindowHeight);
 				PrintObjects();
 
-				if (!_isEndlessMode)
-				{
-					HandleBenchmarkMode();
-				}
-
-				Task.Delay(delay).Wait();
+				Task.Delay(_delay).Wait();
 			}
 		}
 		finally
 		{
-			LeaveMatrix(delay, time);
+			LeaveMatrix(_delay);
 		}
 	}
 
 	private void AddObjects(int width)
 	{
-		if (maxObjects < list.Count)
+		if (_maxObjects < _displayObjects.Count)
 		{
 			return;
 		}
 
-		_objectBuildup += objectAddRate!(width);
+		_objectBuildup += width * _addRate / 200;
 		var objectsToAdd = (int)_objectBuildup;
-        for (int i = 0; i < objectsToAdd; i++)
-        {
+		for (int i = 0; i < objectsToAdd; i++)
+		{
 			var obj = new DisplayObject(width);
-			list.Add(obj);
-			list.AddRange(obj.Trace());
-        }
+			_displayObjects.Add(obj);
+			_displayObjects.AddRange(obj.Trace());
+		}
 		_objectBuildup -= objectsToAdd;
 	}
 
 	private void HandleObjects(int height)
 	{
-		list = list
+		_displayObjects = _displayObjects
 			.Select(e => e.Fall())
 			.Where(e => e.Pos.Y < height)
 			.OrderBy(e => e.IsTrace)
@@ -74,9 +65,8 @@ public class Matrix(int delay = 80, TimeSpan? time = null, int maxObjects = 9999
 	{
 		try
 		{
-			HandleWindowSizeChange();
 			Console.CursorVisible = false;
-			var validColors = list.Where(e => e.Pos.Y >= 0).GroupBy(e => e.Color);
+			var validColors = _displayObjects.Where(e => e.Pos.Y >= 0).GroupBy(e => e.Color);
 
 			var traces = validColors.FirstOrDefault(e => e.Key is ConsoleColor.DarkGreen);
 			PrintTrace(traces);
@@ -141,38 +131,39 @@ public class Matrix(int delay = 80, TimeSpan? time = null, int maxObjects = 9999
 	private void HandleWindowSizeChange()
 	{
 		var hasWindowSizeChanges = _windowDimension.Width != Console.WindowWidth || _windowDimension.Height != Console.WindowHeight;
-		if (hasWindowSizeChanges)
+		if (!hasWindowSizeChanges)
 		{
-			Console.Clear();
-			list = list
-				.Where(e => e.Pos.X < Console.WindowWidth)
-				.Where(e => e.Pos.Y < Console.WindowHeight)
-				.ToList();
-			_windowDimension = (Console.WindowWidth, Console.WindowHeight);
+			return;
 		}
+		Console.Clear();
+		_displayObjects = _displayObjects
+			.Where(e => e.Pos.X < Console.WindowWidth)
+			.Where(e => e.Pos.Y < Console.WindowHeight)
+			.ToList();
+		_windowDimension = (Console.WindowWidth, Console.WindowHeight);
 	}
 
-	private void HandleBenchmarkMode()
-	{
-		Console.SetCursorPosition(5, 1);
-		Console.Write($"Number of objects in RAM: {list.Count} ");
-		_frames++;
-	}
+	//private void HandleBenchmarkMode()
+	//{
+	//	Console.SetCursorPosition(5, 1);
+	//	Console.Write($"Number of objects in RAM: {_displayObjects.Count} ");
+	//	_frames++;
+	//}
 
-	private void LeaveMatrix(int delay, TimeSpan? time)
+	private void LeaveMatrix(int delay, TimeSpan? time = null)
 	{
 		Console.CursorVisible = true;
 		Console.ForegroundColor = ConsoleColor.Gray;
 		Console.SetCursorPosition(0, Console.WindowHeight + 1);
-		if (!_isEndlessMode)
-		{
-			Console.WriteLine(
-				$"Rendered Frames: {_frames} " +
-				$"of possible {time!.Value.TotalMilliseconds / delay} " +
-				$"in time {time} (hh:MM:ss)\n" +
-				$"With an average calculation time of " +
-				$"{((time!.Value.TotalMilliseconds - delay * _frames) / _frames):0.0} ms per frame"
-				);
-		}
+		//if (!_isEndlessMode)
+		//{
+		//	Console.WriteLine(
+		//		$"Rendered Frames: {_frames} " +
+		//		$"of possible {time!.Value.TotalMilliseconds / delay} " +
+		//		$"in time {time} (hh:MM:ss)\n" +
+		//		$"With an average calculation time of " +
+		//		$"{((time!.Value.TotalMilliseconds - delay * _frames) / _frames):0.0} ms per frame"
+		//	);
+		//}
 	}
 }

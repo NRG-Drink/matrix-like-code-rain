@@ -1,0 +1,33 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <Title>Matrix Code Rain</Title>
+    <Authors>Beat Zimmermann</Authors>
+    <Description>Enter the Matrix with your console.</Description>
+    <PackageProjectUrl></PackageProjectUrl>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <RepositoryUrl>https://github.com/NRG-Drink/matrix-like-code-rain</RepositoryUrl>
+    <PackageTags>cmd; matrix; code-rain; falling-code; matrix-digital-rain; digital-rain; matrix-rain; matrix-rain-characters;</PackageTags>
+    <PackAsTool>True</PackAsTool>
+    <ToolCommandName>matrix.enter</ToolCommandName>
+    <AssemblyVersion>1.0.0</AssemblyVersion>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="..\..\README.md">
+      <Pack>True</Pack>
+      <PackagePath>\</PackagePath>
+    </None>
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="CommandLineParser" Version="2.9.1" />
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp.Scripting" Version="4.9.2" />
+  </ItemGroup>
+
+</Project>
