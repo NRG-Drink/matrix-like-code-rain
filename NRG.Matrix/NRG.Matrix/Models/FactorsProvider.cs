@@ -1,6 +1,4 @@
-﻿using NRG.Matrix.App.Models;
-
-namespace NRG.Matrix.Models;
+﻿namespace NRG.Matrix.Models;
 
 public class FactorsProvider
 {
@@ -17,7 +15,7 @@ public class FactorsProvider
 	public int Ease { get; init; } = 20;
 	public float MaxAddRate { get; init; } = 5;
 
-    public float AdjustAddRate(int target, int value, float addRate)
+	public float AdjustAddRate(int target, int value, float addRate)
 	{
 		if (++counter < Cadence)
 		{

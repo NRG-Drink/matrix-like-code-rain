@@ -137,7 +137,7 @@ public class Matrix(Option option)
 			var width = Console.WindowWidth;
 			while (last > width && first > width)
 			{
-				line = line[.. (last - width)];
+				line = line[..(last - width)];
 				width = Console.WindowWidth;
 			}
 			if (first > Console.WindowWidth || last > Console.WindowWidth)
