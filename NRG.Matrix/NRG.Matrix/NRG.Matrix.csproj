@@ -14,8 +14,9 @@
     <PackageTags>cmd; matrix; code-rain; falling-code; matrix-digital-rain; digital-rain; matrix-rain; matrix-rain-characters;</PackageTags>
     <PackAsTool>True</PackAsTool>
     <ToolCommandName>matrix.enter</ToolCommandName>
-    <AssemblyVersion>1.0.0</AssemblyVersion>
+    <AssemblyVersion></AssemblyVersion>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <Version>1.1.0</Version>
   </PropertyGroup>
 
   <ItemGroup>
