@@ -10,4 +10,6 @@ public class Option
 	public int MaxObjects { get; init; }
 	[Option('a', "add-rate", Required = false, Default = 1, HelpText = "Number of objects added each frame (float):")]
 	public float AddRate { get; init; }
+    [Option('b', "bench-mode", Required = false, Default = false, HelpText = "Enter benchmark-mode to see computing stats.")]
+    public bool? IsBench { get; init; }
 }

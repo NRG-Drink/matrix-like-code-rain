@@ -24,13 +24,30 @@ public class Matrix(Option option)
 				HandleObjects(Console.WindowHeight);
 				PrintObjects();
 
-				Task.Delay(_delay).Wait();
+				if (option.IsBench == true)
+				{
+					PrintBenchValues(sw.ElapsedMilliseconds);
+			}
 			}
 		}
 		finally
 		{
 			LeaveMatrix(_delay);
 		}
+	}
+
+	private void PrintBenchValues(long time)
+	{
+		Console.SetCursorPosition(05, 01);
+		Console.Write("╔═════════════════════════╗");
+		Console.SetCursorPosition(05, 02);
+		Console.Write($"║ Object add rate:  {_addRate:00.00} ║");
+		Console.SetCursorPosition(05, 03);
+		Console.Write($"║ Frame calc. time: {time:00} ms ║");
+		Console.SetCursorPosition(05, 04);
+		Console.Write($"║ Max objects: {_displayObjects.Count,10} ║");
+		Console.SetCursorPosition(05, 05);
+		Console.Write("╚═════════════════════════╝");
 	}
 
 	private void AddObjects(int width)
