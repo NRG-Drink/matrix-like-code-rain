@@ -6,8 +6,8 @@ public record DisplayObject
 {
 	private static readonly Random _random = new();
 	private readonly int _traceLength = 20 + _random.Next(0, 11);
-	private string? _symbol;
-	private string _lastRandom = GetRandomSymbol();
+	private char? _symbol;
+	private char _lastRandom = GetRandomSymbol();
 
 	public DisplayObject(int xRange)
 	{
@@ -30,9 +30,9 @@ public record DisplayObject
 	public ConsoleColor Color { get; init; } = ConsoleColor.Gray;
 	public bool IsTrace { get; init; } = false;
 
-	public string Symbol
+	public char Symbol
 	{
-		get => _symbol is null ? GetNextRandomSymbol() : _symbol;
+		get => _symbol is null ? GetNextRandomSymbol() : _symbol.Value;
 		init => _symbol = value;
 	}
 
@@ -48,9 +48,9 @@ public record DisplayObject
 		=> new(Pos, offset);
 
 	private DisplayObject GetClear(int offset)
-		=> new(Pos, offset) { Symbol = " " };
+		=> new(Pos, offset) { Symbol = ' ' };
 
-	private string GetNextRandomSymbol()
+	private char GetNextRandomSymbol()
 	{
 		var getRandom = ShouldGetNewRandom();
 		if (!IsTrace && !getRandom)
@@ -65,8 +65,8 @@ public record DisplayObject
 		return _lastRandom;
 	}
 
-	private static string GetRandomSymbol()
-		=> ((char)_random.Next(33, 123)).ToString();
+	private static char GetRandomSymbol()
+		=> (char)_random.Next(33, 123);
 
 	private static bool ShouldGetNewRandom()
 		=> _random.Next(0, 3) == 0;

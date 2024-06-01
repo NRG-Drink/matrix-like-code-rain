@@ -1,17 +1,30 @@
 ﻿using NRG.Matrix.App.Models;
-using System.Text;
+using NRG.Matrix.Models;
+using System.Diagnostics;
 
 namespace NRG.Matrix.App;
 
 public class Matrix(Option option)
 {
+	private readonly int _delay = Math.Clamp(option.Delay, 0, 9999);
+	private readonly int _maxObjects = Math.Clamp(option.MaxObjects, 1, int.MaxValue);
+	private readonly FactorsProvider _factorProvider = new()
+	{
+		Cadence = 20,
+		Free = 3,
+		Ease = 20,
+		MaxAddRate = option.AddRate,
+	};
+
 	private List<DisplayObject> _displayObjects = [];
 	private (int Width, int Height) _windowDimension = (Console.WindowWidth, Console.WindowHeight);
-
-	private readonly float _addRate = option.AddRate;
-	private readonly int _delay = option.Delay < 0 ? 0 : option.Delay;
-	private readonly int _maxObjects = option.MaxObjects;
 	private float _objectBuildup = 1;
+	private float _addRate = 1;
+	public float AddRate
+	{
+		get => _addRate;
+		set => _addRate = Math.Clamp(value, 0.0001f, 999);
+	}
 
 	public void Enter()
 	{
@@ -20,17 +33,40 @@ public class Matrix(Option option)
 			Console.Clear();
 			while (true)
 			{
+				var sw = Stopwatch.StartNew();
 				AddObjects(Console.WindowWidth);
 				HandleObjects(Console.WindowHeight);
 				PrintObjects();
 
-				Task.Delay(_delay).Wait();
+				if (option.IsBench == true)
+				{
+					PrintBenchValues(sw.ElapsedMilliseconds);
+				}
+
+				var time = sw.ElapsedMilliseconds;
+				var frameTimeOffset = option.MaxFrameTime - (int)time;
+				AddRate = _factorProvider.AdjustAddRate(0, frameTimeOffset, _addRate);
+				Task.Delay(Math.Max(0, _delay - (int)time)).Wait();
 			}
 		}
 		finally
 		{
 			LeaveMatrix(_delay);
 		}
+	}
+
+	private void PrintBenchValues(long time)
+	{
+		Console.SetCursorPosition(05, 01);
+		Console.Write("╔═════════════════════════╗");
+		Console.SetCursorPosition(05, 02);
+		Console.Write($"║ Object add rate:  {_addRate:00.00} ║");
+		Console.SetCursorPosition(05, 03);
+		Console.Write($"║ Frame calc. time: {time:00} ms ║");
+		Console.SetCursorPosition(05, 04);
+		Console.Write($"║ Max objects: {_displayObjects.Count,10} ║");
+		Console.SetCursorPosition(05, 05);
+		Console.Write("╚═════════════════════════╝");
 	}
 
 	private void AddObjects(int width)
@@ -65,23 +101,25 @@ public class Matrix(Option option)
 	{
 		try
 		{
+			HandleWindowSizeChange();
 			Console.CursorVisible = false;
-			var validColors = _displayObjects.Where(e => e.Pos.Y >= 0).GroupBy(e => e.Color);
+			var validColorGroups = _displayObjects
+				.Where(e => e.Pos.Y >= 0)
+				.GroupBy(e => e.Color);
 
-			var traces = validColors.FirstOrDefault(e => e.Key is ConsoleColor.DarkGreen);
-			PrintTrace(traces);
-
-			var others = validColors.Where(e => e.Key is not ConsoleColor.DarkGreen);
-			PrintOthers(others);
+			var traces = validColorGroups.FirstOrDefault(e => e.Key is ConsoleColor.DarkGreen);
+			PrintToConsoleByLine(traces);
+			var others = validColorGroups.Where(e => e.Key is not ConsoleColor.DarkGreen);
+			PrintToConsoleByChar(others);
 		}
-		catch (ArgumentOutOfRangeException)
+		catch (ArgumentOutOfRangeException ex)
 		{
 			// Window was resized to a smaller size.
 			HandleWindowSizeChange();
 		}
 	}
 
-	private void PrintTrace(IGrouping<ConsoleColor, DisplayObject>? traces)
+	private static void PrintToConsoleByLine(IGrouping<ConsoleColor, DisplayObject>? traces)
 	{
 		if (traces is null)
 		{
@@ -89,38 +127,48 @@ public class Matrix(Option option)
 		}
 
 		var orderedRows = traces.OrderBy(e => e.Pos.X).GroupBy(e => e.Pos.Y);
-		Console.ForegroundColor = ConsoleColor.DarkGreen;
+		Console.ForegroundColor = traces.Key;
 		foreach (var row in orderedRows)
 		{
-			var obj = row.ToList();
-			var first = obj.First().Pos.X;
-			var last = obj.Last().Pos.X;
+			var first = row.First().Pos.X;
+			var last = row.Last().Pos.X;
+
+			var line = GetLineText([.. row], first, last);
+			var width = Console.WindowWidth;
+			while (last > width && first > width)
+			{
+				line = line[..(last - width)];
+				width = Console.WindowWidth;
+			}
+			if (first > Console.WindowWidth || last > Console.WindowWidth)
+			{
+				continue;
+			}
 
 			Console.SetCursorPosition(first, row.Key);
-			var line = GetLineText(obj, first, last);
 			Console.Write(line);
 		}
 	}
 
 	private static string GetLineText(List<DisplayObject> obj, int first, int last)
 	{
-		var len = last - first - obj.Count + 1;
-		var line = string.Join("", Enumerable.Repeat(" ", len));
-		var sb = new StringBuilder(line);
+		var line = new char[last - first + 1];
+		Array.Fill(line, ' ');
+
 		foreach (var o in obj)
 		{
-			sb.Insert(o.Pos.X - first, o.Symbol);
+			line[o.Pos.X - first] = o.Symbol;
 		}
 
-		return sb.ToString();
+		return new string(line);
 	}
 
-	private void PrintOthers(IEnumerable<IGrouping<ConsoleColor, DisplayObject>> others)
+	private static void PrintToConsoleByChar(IEnumerable<IGrouping<ConsoleColor, DisplayObject>> others)
 	{
 		foreach (var group in others)
 		{
 			Console.ForegroundColor = group.Key;
-			foreach (var obj in group)
+			foreach (var obj in group.Where(e => e.Pos.X < Console.WindowWidth))
 			{
 				Console.SetCursorPosition(obj.Pos.X, obj.Pos.Y);
 				Console.Write(obj.Symbol);
@@ -135,6 +183,7 @@ public class Matrix(Option option)
 		{
 			return;
 		}
+
 		Console.Clear();
 		_displayObjects = _displayObjects
 			.Where(e => e.Pos.X < Console.WindowWidth)
@@ -143,27 +192,10 @@ public class Matrix(Option option)
 		_windowDimension = (Console.WindowWidth, Console.WindowHeight);
 	}
 
-	//private void HandleBenchmarkMode()
-	//{
-	//	Console.SetCursorPosition(5, 1);
-	//	Console.Write($"Number of objects in RAM: {_displayObjects.Count} ");
-	//	_frames++;
-	//}
-
-	private void LeaveMatrix(int delay, TimeSpan? time = null)
+	private static void LeaveMatrix(int delay, TimeSpan? time = null)
 	{
 		Console.CursorVisible = true;
 		Console.ForegroundColor = ConsoleColor.Gray;
 		Console.SetCursorPosition(0, Console.WindowHeight + 1);
-		//if (!_isEndlessMode)
-		//{
-		//	Console.WriteLine(
-		//		$"Rendered Frames: {_frames} " +
-		//		$"of possible {time!.Value.TotalMilliseconds / delay} " +
-		//		$"in time {time} (hh:MM:ss)\n" +
-		//		$"With an average calculation time of " +
-		//		$"{((time!.Value.TotalMilliseconds - delay * _frames) / _frames):0.0} ms per frame"
-		//	);
-		//}
 	}
 }
