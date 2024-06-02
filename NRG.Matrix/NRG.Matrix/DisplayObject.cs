@@ -13,23 +13,24 @@ public record DisplayObject
 	{
 		Pos = new Point(_random.Next(0, xRange), 0);
 		IsTrace = false;
-		Color = OtherColor;
+		Color = ConsoleColor.Gray;
+		NewSymbolChance = 3;
 	}
 
 	public DisplayObject(Point pos, int yOffset)
 	{
 		Pos = pos with { Y = pos.Y - yOffset };
 		IsTrace = true;
-		Color = TraceColor;
+		Color = ConsoleColor.DarkGreen;
+		NewSymbolChance = 6;
 	}
 
-	public static ConsoleColor TraceColor { get; set; } = ConsoleColor.DarkGreen;
-	public static ConsoleColor OtherColor { get; set; } = ConsoleColor.Gray;
 
 	public Point Pos { get; init; } = new(999, 999);
 	public ConsoleColor Color { get; init; } = ConsoleColor.Gray;
 	public bool IsTrace { get; init; } = false;
 
+	public int NewSymbolChance { get; init; } = 3;
 	public char Symbol
 	{
 		get => _symbol is null ? GetNextRandomSymbol() : _symbol.Value;
@@ -44,7 +45,7 @@ public record DisplayObject
 			.Select(GetTrace)
 			.Append(GetClear(_traceLength + 1));
 
-	private DisplayObject GetTrace(int offset)
+	private DisplayObject GetTrace(int offset, int _)
 		=> new(Pos, offset);
 
 	private DisplayObject GetClear(int offset)
@@ -52,13 +53,8 @@ public record DisplayObject
 
 	private char GetNextRandomSymbol()
 	{
-		var getRandom = ShouldGetNewRandom();
-		if (!IsTrace && !getRandom)
-		{
-			// Double chance for changed symbol on non trace object.
-			getRandom = ShouldGetNewRandom();
-		}
-		if (getRandom)
+		var isNewSymbol = ShouldGetNewSymbol(NewSymbolChance);
+		if (isNewSymbol)
 		{
 			_lastRandom = GetRandomSymbol();
 		}
@@ -68,6 +64,6 @@ public record DisplayObject
 	private static char GetRandomSymbol()
 		=> (char)_random.Next(33, 123);
 
-	private static bool ShouldGetNewRandom()
-		=> _random.Next(0, 3) == 0;
+	private static bool ShouldGetNewSymbol(int chance)
+		=> _random.Next(0, chance) == 0;
 }
