@@ -2,37 +2,49 @@
 
 namespace NRG.Matrix.Models;
 
-public record MatrixObject
+public abstract record MatrixObject
 {
-    public Point Pos { get; set; }
-    public char Symbol { get; set; }
-    public ConsoleColor Color { get; init; }
-    public byte SymbolChangeChance { get; init; }
+    private readonly char[] _charset;
+    private readonly int _change;
 
-    public static MatrixObject CreateLead(Point p, char symbol)
-        => new()
-        {
-            Pos = p,
-            Symbol = symbol,
-            Color = ConsoleColor.Gray,
-            SymbolChangeChance = 3
-        };
+    protected MatrixObject(Point pos, ConsoleColor color, char[] charset, int change)
+    {
+        _change = change;
+        _charset = charset;
+        Pos = pos;
+        Color = color;
+        Symbol = charset.Length is 0 ? ' ' : GetRandomChar(charset);
+    }
 
-    public static MatrixObject CreateTrace(Point p, char symbol)
-        => new()
-        {
-            Pos = p,
-            Symbol = symbol,
-            Color = ConsoleColor.DarkGreen,
-            SymbolChangeChance = 6
-        };
+    public Point Pos { get; private set; }
+    public char Symbol { get; protected set; }
+    public ConsoleColor Color { get; private set; }
 
-    public static MatrixObject CreateClean(Point p)
-        => new()
+    public void Fall(int x, int y)
+        => Pos = Pos with { X = Pos.X + x, Y = Pos.Y + y };
+
+    public virtual void ChangeSymbol()
+    {
+        if (ShouldGetNewSymbol(_change))
         {
-            Pos = p,
-            Symbol = ' ',
-            Color = 0,
-            SymbolChangeChance = byte.MaxValue
-        };
+            Symbol = GetRandomChar(_charset);
+        }
+    }
+
+    protected static bool ShouldGetNewSymbol(int change)
+        => change < 0
+            ? false
+            : Random.Shared.Next(0, change) is 0;
+
+    protected static char GetRandomChar(char[] charset)
+        => charset[Random.Shared.Next(0, charset.Length)];
 };
+
+public record MatrixLead(Point Pos, char[] Charset) : MatrixObject(Pos, ConsoleColor.Gray, Charset, 3);
+
+public record MatrixTrace(Point Pos, char[] Charset) : MatrixObject(Pos, ConsoleColor.DarkGreen, Charset, 6);
+
+public record MatrixClean(Point Pos) : MatrixObject(Pos, 0, [' '], -1)
+{
+    public override void ChangeSymbol() { }
+}
