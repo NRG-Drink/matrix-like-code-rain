@@ -2,19 +2,37 @@
 
 namespace NRG.Matrix.Models;
 
-public readonly record struct MatrixObject(
-    Point Pos,
-    char Symbol,
-    ConsoleColor Color,
-    byte SymbolChangeChance
-    )
+public record MatrixObject
 {
+    public Point Pos { get; set; }
+    public char Symbol { get; set; }
+    public ConsoleColor Color { get; init; }
+    public byte SymbolChangeChance { get; init; }
+
     public static MatrixObject CreateLead(Point p, char symbol)
-        => new(p, symbol, ConsoleColor.Gray, 3);
+        => new()
+        {
+            Pos = p,
+            Symbol = symbol,
+            Color = ConsoleColor.Gray,
+            SymbolChangeChance = 3
+        };
 
     public static MatrixObject CreateTrace(Point p, char symbol)
-        => new(p, symbol, ConsoleColor.DarkGreen, 6);
+        => new()
+        {
+            Pos = p,
+            Symbol = symbol,
+            Color = ConsoleColor.DarkGreen,
+            SymbolChangeChance = 6
+        };
 
     public static MatrixObject CreateClean(Point p)
-        => new(p, ' ', 0, byte.MaxValue);
+        => new()
+        {
+            Pos = p,
+            Symbol = ' ',
+            Color = 0,
+            SymbolChangeChance = byte.MaxValue
+        };
 };

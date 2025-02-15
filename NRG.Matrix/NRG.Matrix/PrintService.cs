@@ -12,22 +12,23 @@ public class PrintService
 		{
 			HandleWindowSizeChange();
 			Console.CursorVisible = false;
-			var validCoordinates = obj
+			var colorGroups = obj
 				.Where(e => e.Pos.Y >= 0)
-				.Where(e => e.Pos.Y < _windowDimension.Height)
-				//.Where(e => e.Pos.X >= 0)
-				//.Where(e => e.Pos.X < _windowDimension.Width)
-				.GroupBy(e => e.Color)
-				;
+				.Where(e => e.Pos.Y <= _windowDimension.Height)
+				.Where(e => e.Pos.X >= 0)
+				.Where(e => e.Pos.X <= _windowDimension.Width)
+				.GroupBy(e => e.Color);
 
-			var darkGreens = validCoordinates.FirstOrDefault(e => e.Key is ConsoleColor.DarkGreen);
+			var darkGreens = colorGroups
+				.FirstOrDefault(e => e.Key is ConsoleColor.DarkGreen)?
+				.DistinctBy(e => e.Pos);
 			PrintToConsoleByLine(darkGreens, ConsoleColor.DarkGreen);
 
-			var others = validCoordinates.Where(e => e.Key is not ConsoleColor.DarkGreen);
+			var others = colorGroups.Where(e => e.Key is not ConsoleColor.DarkGreen);
 			foreach (var o in others)
 			{
                 Console.ForegroundColor = o.Key;
-				foreach (var c in o)
+				foreach (var c in o.DistinctBy(e => e.Pos))
 				{
 					Console.SetCursorPosition(c.Pos.X, c.Pos.Y);
 					Console.Write(c.Symbol);
@@ -62,7 +63,6 @@ public class PrintService
 
 	private char[] GetLineText(IEnumerable<MatrixObject> row, int first)
 	{
-		//var width = Console.WindowWidth;
 		var inRanges = row.Where(e => e.Pos.X < _windowDimension.Width).ToArray();
 		var len = inRanges.Max(e => e.Pos.X) - first + 1;
 

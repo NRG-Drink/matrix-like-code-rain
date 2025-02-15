@@ -30,13 +30,16 @@ public class MatrixObjectHandler(
         yield return clean;
     }
 
-    public MatrixObject Fall(MatrixObject obj)
-        => obj with { Pos = FallPoint(obj.Pos) };
+    public void Fall(MatrixObject o)
+        => o.Pos = FallPoint(o.Pos);
 
-    public MatrixObject Symbol(MatrixObject obj)
-        => ShouldGetNewSymbol(obj.SymbolChangeChance)
-            ? obj with { Symbol = GetRandomSymbol() }
-            : obj;
+    public void Symbol(MatrixObject o)
+    {
+        if (ShouldGetNewSymbol(o.SymbolChangeChance))
+        {
+            o.Symbol = GetRandomSymbol();
+        }
+    }
 
     private Point FallPoint(Point p)
         => p with { Y = p.Y + yFall };
@@ -45,5 +48,7 @@ public class MatrixObjectHandler(
         => (char)Random.Shared.Next(33, 123);
 
     private static bool ShouldGetNewSymbol(int chance)
-        => Random.Shared.Next(0, chance) is 0;
+        => chance is byte.MaxValue
+            ? false
+            : Random.Shared.Next(0, chance) is 0;
 }

@@ -1,9 +1,9 @@
 ﻿namespace NRG.Matrix.Models;
 
-public struct ConsoleSize()
+public readonly struct ConsoleSize()
 {
-	public int Width { get; set; } = Console.WindowWidth;
-	public int Height { get; set; } = Console.WindowHeight;
+	public int Width { get; init; } = Console.WindowWidth;
+	public int Height { get; init; } = Console.WindowHeight;
 
 	public static bool operator ==(ConsoleSize e1, ConsoleSize e2)
 		=> e1.Width == e2.Width && e1.Height == e2.Height;

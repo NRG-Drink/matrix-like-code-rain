@@ -19,7 +19,7 @@ public class Matrix(Option option)
 		MaxAddRate = option.AddRate,
 	};
 
-	private MatrixObject[] _displayObjects = [];
+	private List<MatrixObject> _displayObjects = [];
 	private float _objectBuildup = 1;
 	private float _addRate = 1;
 
@@ -31,7 +31,6 @@ public class Matrix(Option option)
 			while (true)
 			{
 				var sw = Stopwatch.StartNew();
-				ProcessFrame();
 				_printService.PrintObjects(_displayObjects);
 
 				if (option.IsBench == true)
@@ -42,6 +41,7 @@ public class Matrix(Option option)
 				var time = (int)sw.ElapsedMilliseconds;
 				var frameTimeOffset = option.MaxFrameTime - time;
 				_addRate = _factorProvider.AdjustAddRate(0, frameTimeOffset, _addRate);
+				ProcessFrame();
 				var delay = _delay - time;
 				if (delay > 0)
 				{
@@ -60,14 +60,15 @@ public class Matrix(Option option)
 		var width = Console.WindowWidth;
 		var height = Console.WindowHeight;
 
-		_displayObjects = _displayObjects
-			.Concat(ObjectsToAdd(width))
-			.Select(_objectHandler.Fall)
-			.Select(_objectHandler.Symbol)
-            .Where(e => IsPositionValid(e, width, height))
-			.OrderBy(e => e.Color is ConsoleColor.Gray)
-			.DistinctBy(e => e.Pos)
-            .ToArray();
+		_displayObjects.AddRange(ObjectsToAdd(width));
+
+		foreach (var e in _displayObjects)
+		{
+			_objectHandler.Fall(e);
+			_objectHandler.Symbol(e);
+		}
+
+		_displayObjects.RemoveAll(e => !IsPositionValid(e, width, height));
 	}
 
     private static bool IsPositionValid(MatrixObject e, int width, int height)
@@ -75,9 +76,8 @@ public class Matrix(Option option)
 
     private IEnumerable<MatrixObject> ObjectsToAdd(int width)
 	{
-		if (_maxObjects < _displayObjects.Length)
+		if (_maxObjects < _displayObjects.Count)
 		{
-			//yield break;
 			return [];
 		}
 
@@ -98,8 +98,7 @@ public class Matrix(Option option)
 				$"| -d {_delay:00} " +
 				$"| -a {_addRate:00.00}/{option.AddRate:00.00} " +
 				$"| -m {time:00}/{option.MaxFrameTime:00} " +
-				$"| -o {_displayObjects.Length,6}/{option.MaxObjects} " +
-				"";
+				$"| -o {_displayObjects.Count,6}/{option.MaxObjects} ";
 		}
 	}
 
