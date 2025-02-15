@@ -38,7 +38,7 @@ public record DisplayObject
 	}
 
 	public DisplayObject Fall(int x = 0, int y = 1)
-		=> this with { Pos = new Point(Pos.X + x, Pos.Y + y) };
+		=> this with { Pos = new(Pos.X + x, Pos.Y + y) };
 
 	public IEnumerable<DisplayObject> Trace()
 		=> Enumerable.Range(1, _traceLength)

@@ -37,10 +37,10 @@ public class Matrix(Option option)
 					PrintBenchValues(sw.ElapsedMilliseconds);
 				}
 
-				var time = sw.ElapsedMilliseconds;
-				var frameTimeOffset = option.MaxFrameTime - (int)time;
+				var time = (int)sw.ElapsedMilliseconds;
+				var frameTimeOffset = option.MaxFrameTime - time;
 				_addRate = _factorProvider.AdjustAddRate(0, frameTimeOffset, _addRate);
-				var delay = _delay - (int)time;
+				var delay = _delay - time;
 				if (delay > 0)
 				{
 					Task.Delay(delay).Wait();
@@ -97,9 +97,11 @@ public class Matrix(Option option)
 		if (option.IsBench == true)
 		{
 			Console.Title = $"" +
-				$"  -o {_displayObjects.Count,6} " +
-				$"| -a {_addRate:00.00} " +
-				$"| -m {time:00}";
+				$"| -d {_delay:00} " +
+				$"| -a {_addRate:00.00}/{option.AddRate:00.00} " +
+				$"| -m {time:00}/{option.MaxFrameTime:00} " +
+				$"| -o {_displayObjects.Count,6}/{option.MaxObjects} " +
+				"";
 		}
 	}
 

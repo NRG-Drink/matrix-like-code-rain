@@ -2,7 +2,7 @@
   "profiles": {
     "NRG.Matrix.App": {
       "commandName": "Project",
-      "commandLineArgs": "-d 80 -a 20 -m 30 -o 99999"
+      "commandLineArgs": "-d 80 -a 5 -m 20 -o 99999 -b true"
     }
   }
 }
