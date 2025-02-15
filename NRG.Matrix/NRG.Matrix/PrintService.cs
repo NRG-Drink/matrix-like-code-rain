@@ -16,18 +16,22 @@ public class PrintService
 				.Where(e => e.Pos.Y >= 0)
 				.Where(e => e.Pos.Y < _windowDimension.Height)
 				//.Where(e => e.Pos.X >= 0)
-				.Where(e => e.Pos.X < _windowDimension.Width)
+				//.Where(e => e.Pos.X < _windowDimension.Width)
+				.GroupBy(e => e.Color)
 				;
 
-			var darkGreens = validCoordinates.Where(e => e.Color is ConsoleColor.DarkGreen);
+			var darkGreens = validCoordinates.FirstOrDefault(e => e.Key is ConsoleColor.DarkGreen);
 			PrintToConsoleByLine(darkGreens, ConsoleColor.DarkGreen);
 
-			var others = validCoordinates.Where(e => e.Color is not ConsoleColor.DarkGreen);
+			var others = validCoordinates.Where(e => e.Key is not ConsoleColor.DarkGreen);
 			foreach (var o in others)
 			{
-                Console.ForegroundColor = o.Color;
-                Console.SetCursorPosition(o.Pos.X, o.Pos.Y);
-                Console.Write(o.Symbol);
+                Console.ForegroundColor = o.Key;
+				foreach (var c in o)
+				{
+					Console.SetCursorPosition(c.Pos.X, c.Pos.Y);
+					Console.Write(c.Symbol);
+				}
             }
 		}
 		catch (ArgumentOutOfRangeException)
@@ -37,7 +41,7 @@ public class PrintService
 		}
 	}
 
-	private static void PrintToConsoleByLine(IEnumerable<MatrixObject> traces, ConsoleColor color)
+	private void PrintToConsoleByLine(IEnumerable<MatrixObject>? traces, ConsoleColor color)
 	{
 		if (traces is null)
 		{
@@ -56,10 +60,10 @@ public class PrintService
 		}
 	}
 
-	private static char[] GetLineText(IEnumerable<MatrixObject> row, int first)
+	private char[] GetLineText(IEnumerable<MatrixObject> row, int first)
 	{
-		var width = Console.WindowWidth;
-		var inRanges = row.Where(e => e.Pos.X < width).ToArray();
+		//var width = Console.WindowWidth;
+		var inRanges = row.Where(e => e.Pos.X < _windowDimension.Width).ToArray();
 		var len = inRanges.Max(e => e.Pos.X) - first + 1;
 
 		var line = new char[len];
