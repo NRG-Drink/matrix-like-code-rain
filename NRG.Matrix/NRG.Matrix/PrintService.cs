@@ -1,5 +1,4 @@
-﻿using NRG.Matrix.App;
-using NRG.Matrix.Models;
+﻿using NRG.Matrix.Models;
 
 namespace NRG.Matrix;
 

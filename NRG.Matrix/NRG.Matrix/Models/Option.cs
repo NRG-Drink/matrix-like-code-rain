@@ -1,6 +1,6 @@
 ﻿using CommandLine;
 
-namespace NRG.Matrix.App.Models;
+namespace NRG.Matrix.Models;
 
 public class Option
 {

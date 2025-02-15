@@ -1,7 +1,7 @@
-﻿using NRG.Matrix.App.Models;
+﻿using NRG.Matrix.Models;
 using System.Diagnostics;
 
-namespace NRG.Matrix.App;
+namespace NRG.Matrix;
 
 public class Matrix(Option option)
 {

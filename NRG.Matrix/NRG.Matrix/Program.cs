@@ -1,7 +1,7 @@
 ﻿using CommandLine;
-using NRG.Matrix.App.Models;
+using NRG.Matrix.Models;
 
-namespace NRG.Matrix.App;
+namespace NRG.Matrix;
 
 internal class Program
 {
