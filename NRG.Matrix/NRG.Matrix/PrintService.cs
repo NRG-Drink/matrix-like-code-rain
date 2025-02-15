@@ -4,24 +4,31 @@ namespace NRG.Matrix;
 
 public class PrintService
 {
-	private IEnumerable<DisplayObject> _displayObjects = [];
 	private ConsoleSize _windowDimension = new();
 
-	public void PrintObjects(List<DisplayObject> obj)
+	public void PrintObjects(IEnumerable<MatrixObject> obj)
 	{
-		_displayObjects = obj;
 		try
 		{
 			HandleWindowSizeChange();
 			Console.CursorVisible = false;
-			var validColorGroups = _displayObjects
+			var validCoordinates = obj
 				.Where(e => e.Pos.Y >= 0)
-				.GroupBy(e => e.Color);
+				.Where(e => e.Pos.Y < _windowDimension.Height)
+				//.Where(e => e.Pos.X >= 0)
+				.Where(e => e.Pos.X < _windowDimension.Width)
+				;
 
-			var traces = validColorGroups.FirstOrDefault(e => e.Key is ConsoleColor.DarkGreen);
-			PrintToConsoleByLine(traces);
-			var others = validColorGroups.Where(e => e.Key is not ConsoleColor.DarkGreen);
-			PrintToConsoleByChar(others);
+			var darkGreens = validCoordinates.Where(e => e.Color is ConsoleColor.DarkGreen);
+			PrintToConsoleByLine(darkGreens, ConsoleColor.DarkGreen);
+
+			var others = validCoordinates.Where(e => e.Color is not ConsoleColor.DarkGreen);
+			foreach (var o in others)
+			{
+                Console.ForegroundColor = o.Color;
+                Console.SetCursorPosition(o.Pos.X, o.Pos.Y);
+                Console.Write(o.Symbol);
+            }
 		}
 		catch (ArgumentOutOfRangeException)
 		{
@@ -30,14 +37,14 @@ public class PrintService
 		}
 	}
 
-	private static void PrintToConsoleByLine(IGrouping<ConsoleColor, DisplayObject>? traces)
+	private static void PrintToConsoleByLine(IEnumerable<MatrixObject> traces, ConsoleColor color)
 	{
 		if (traces is null)
 		{
 			return;
 		}
 
-		Console.ForegroundColor = traces.Key;
+		Console.ForegroundColor = color;
 		var groupedRows = traces.GroupBy(e => e.Pos.Y);
 		foreach (var row in groupedRows)
 		{
@@ -49,10 +56,10 @@ public class PrintService
 		}
 	}
 
-	private static char[] GetLineText(IEnumerable<DisplayObject> row, int first)
+	private static char[] GetLineText(IEnumerable<MatrixObject> row, int first)
 	{
 		var width = Console.WindowWidth;
-		var inRanges = row.Where(e => e.Pos.X < width).ToList();
+		var inRanges = row.Where(e => e.Pos.X < width).ToArray();
 		var len = inRanges.Max(e => e.Pos.X) - first + 1;
 
 		var line = new char[len];
@@ -64,20 +71,6 @@ public class PrintService
 		}
 
 		return line;
-	}
-
-	private static void PrintToConsoleByChar(IEnumerable<IGrouping<ConsoleColor, DisplayObject>> others)
-	{
-		foreach (var group in others)
-		{
-			Console.ForegroundColor = group.Key;
-			var filteredGroup = group.Where(e => e.Pos.X < Console.WindowWidth);
-			foreach (var obj in filteredGroup)
-			{
-				Console.SetCursorPosition(obj.Pos.X, obj.Pos.Y);
-				Console.Write(obj.Symbol);
-			}
-		}
 	}
 
 	private void HandleWindowSizeChange()

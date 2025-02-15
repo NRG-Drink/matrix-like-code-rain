@@ -1,4 +1,5 @@
-﻿using NRG.Matrix.Models;
+﻿using Microsoft.VisualBasic;
+using NRG.Matrix.Models;
 using System.Diagnostics;
 
 namespace NRG.Matrix;
@@ -8,6 +9,7 @@ public class Matrix(Option option)
 	private readonly int _delay = Math.Clamp(option.Delay, 0, 9999);
 	private readonly int _maxObjects = Math.Clamp(option.MaxObjects, 1, int.MaxValue);
 	private readonly ConsoleColor _formerColor = Console.ForegroundColor;
+	private readonly MatrixObjectHandler _objectHandler = new();
 	private readonly PrintService _printService = new();
 	private readonly FactorsProvider _factorProvider = new()
 	{
@@ -17,7 +19,7 @@ public class Matrix(Option option)
 		MaxAddRate = option.AddRate,
 	};
 
-	private List<DisplayObject> _displayObjects = [];
+	private MatrixObject[] _displayObjects = [];
 	private float _objectBuildup = 1;
 	private float _addRate = 1;
 
@@ -53,43 +55,39 @@ public class Matrix(Option option)
 		}
 	}
 
-	private static bool IsPositionValid(DisplayObject e, int width, int height)
-		=> e.Pos.Y < height && e.Pos.X < width;
-
 	private void ProcessFrame()
 	{
 		var width = Console.WindowWidth;
 		var height = Console.WindowHeight;
 
 		_displayObjects = _displayObjects
-			.Select(e => e.Fall())
 			.Concat(ObjectsToAdd(width))
-			.Where(e => IsPositionValid(e, width, height))
-			.OrderBy(e => e.IsTrace)
+			.Select(_objectHandler.Fall)
+			.Select(_objectHandler.Symbol)
+            .Where(e => IsPositionValid(e, width, height))
+			.OrderBy(e => e.Color is ConsoleColor.Gray)
 			.DistinctBy(e => e.Pos)
-			.ToList();
+            .ToArray();
 	}
 
-	private IEnumerable<DisplayObject> ObjectsToAdd(int width)
+    private static bool IsPositionValid(MatrixObject e, int width, int height)
+        => e.Pos.Y < height && e.Pos.X < width;
+
+    private IEnumerable<MatrixObject> ObjectsToAdd(int width)
 	{
-		if (_maxObjects < _displayObjects.Count)
+		if (_maxObjects < _displayObjects.Length)
 		{
-			yield break;
+			//yield break;
+			return [];
 		}
 
 		_objectBuildup += width * _addRate / 200;
 		var objectsToAdd = (int)_objectBuildup;
-		for (int i = 0; i < objectsToAdd; i++)
-		{
-			var obj = new DisplayObject(width);
-			yield return obj;
-
-			foreach (var e in obj.Trace())
-			{
-				yield return e;
-			}
-		}
 		_objectBuildup -= objectsToAdd;
+
+		return Enumerable
+			.Range(0, objectsToAdd)
+			.SelectMany(e => _objectHandler.CreateNewMatrixLine(width));
 	}
 
 	private void PrintBenchValues(long time)
@@ -100,7 +98,7 @@ public class Matrix(Option option)
 				$"| -d {_delay:00} " +
 				$"| -a {_addRate:00.00}/{option.AddRate:00.00} " +
 				$"| -m {time:00}/{option.MaxFrameTime:00} " +
-				$"| -o {_displayObjects.Count,6}/{option.MaxObjects} " +
+				$"| -o {_displayObjects.Length,6}/{option.MaxObjects} " +
 				"";
 		}
 	}
