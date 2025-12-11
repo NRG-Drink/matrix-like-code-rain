@@ -3,113 +3,89 @@ using System.Diagnostics;
 
 namespace NRG.Matrix;
 
-public class Matrix(Option option)
+public class Matrix
 {
-    private readonly List<MatrixObject> _displayObjects = [];
-    private readonly PrintService _printService = new();
-    private readonly FactorsProvider _factorProvider = new()
+    public async Task Enter(CancellationToken token)
     {
-        Cadence = 20,
-        Free = 3,
-        Ease = 20,
-        MaxAddRate = option.AddRate,
-    };
-    private readonly MatrixObjectFactory _objectHandler = new()
-    {
-        MinTraceLength = 20,
-        VarianceTraceLength = 10,
-        LeadCharset = Alphabets.Default,
-        TraceCharset = Alphabets.Default
-    };
+        var width = 0;
+        var height = 0;
+        var generateNewObjectSW = Stopwatch.StartNew();
+        var generateNewObjectTime = TimeSpan.FromMilliseconds(500);
+        var shots = new List<Shot>();
+        var objs = new List<MatrixChar>();
 
-    private readonly ConsoleColor _formerColor = Console.ForegroundColor;
-    private readonly int _maxObjects = Math.Clamp(option.MaxObjects, 1, int.MaxValue);
-    private readonly int _delay = Math.Clamp(option.Delay, 0, 9999);
-    private float _objectBuildup = 1;
-    private float _addRate = 1;
+        var shotCount = 0;
+        var frameTime = Stopwatch.StartNew();
+        var targetFrameTime = 1000 / (float)60;
 
-    public void Enter()
-    {
-        try
+        while (!token.IsCancellationRequested)
         {
-            Console.Clear();
-            while (true)
+            if (width!= Console.BufferWidth || height != Console.BufferHeight)
             {
-                var sw = Stopwatch.StartNew();
-                ProcessFrame();
-                _printService.PrintObjects(_displayObjects);
-
-                if (option.IsBench == true)
-                {
-                    PrintBenchValues(sw.ElapsedMilliseconds);
-                }
-
-                var time = (int)sw.ElapsedMilliseconds;
-                var frameTimeOffset = option.MaxFrameTime - time;
-                _addRate = _factorProvider.AdjustAddRate(0, frameTimeOffset, _addRate);
-                var delay = _delay - time;
-                if (delay > 0)
-                {
-                    Task.Delay(delay).Wait();
-                }
+                width = Console.BufferWidth;
+                height = Console.BufferHeight;
+                MatrixConsole.Initialize();
             }
-        }
-        finally
-        {
-            LeaveMatrix();
+
+            if (generateNewObjectSW.Elapsed > generateNewObjectTime)
+            {
+                var shot = new Shot(Random.Shared.Next(0, Console.BufferWidth), 0, TimeSpan.FromMilliseconds(Random.Shared.Next(200, 1000)));
+                shotCount++;
+                var numberStr = $"{shotCount:D12}";
+                var chars = numberStr
+                    .Reverse()
+                    .Select((e, i) => new MatrixChar(shot, e, new(200, 200, 200)) { Y = 0 - i})
+                    .ToArray();
+                //var chars = numberStr.Select((e, i) => new MatrixChar(shot, (char)Random.Shared.Next(33, 90), new(200, 200, 200), Random.Shared.Next(0, Console.BufferWidth)) { Y = 0 - i}).ToArray();
+                shot.Chars = chars;
+
+                objs.AddRange(chars);
+                shots.Add(shot);
+                generateNewObjectSW.Restart();
+            }
+
+            var shotsToFall = shots.Where(e => e.IsExceeded).ToArray();
+            var charsToFall = objs;
+            foreach (var o in charsToFall)
+            {
+                MatrixConsole.Set(o.Shot.X, o.Y, o);
+            }
+
+            foreach (var shot in shotsToFall)
+            {
+                shot.Fall();
+                shot.SW.Restart();
+            }
+
+            MatrixConsole.DrawBuffer();
+            MatrixConsole.Clear();
+            //var wait = Math.Max(0, targetFrameTime - frameTime.Elapsed.TotalMilliseconds) / 2;
+            //await Task.Delay((int)wait, token);
+            var fps = Math.Round(1 / frameTime.Elapsed.TotalSeconds);
+            //Console.Title = $"FPS: {fps}";
+            Console.Title = $"{frameTime.Elapsed.TotalMilliseconds}";
+            frameTime.Restart();
         }
     }
+}
 
-    private void ProcessFrame()
+public record Shot(int X, byte Z, TimeSpan Time)
+{
+    public bool IsExceeded => SW.Elapsed >= Time;
+    public Stopwatch SW { get; } = Stopwatch.StartNew();
+    public MatrixChar[] Chars { get; set; } = [];
+
+    public void Fall(int Y = 1)
     {
-        var width = Console.WindowWidth;
-        var height = Console.WindowHeight;
-
-        _displayObjects.AddRange(ObjectsToAdd(width));
-        _displayObjects.RemoveAll(e => !IsPositionValid(e, width, height));
-
-        foreach (var e in _displayObjects)
+        foreach (var c in Chars)
         {
-            e.Fall(0, 1);
-            e.ChangeSymbol();
+            c.Y += Y;
         }
     }
+}
 
-    private static bool IsPositionValid(MatrixObject e, int width, int height)
-        => e.Pos.Y < height && e.Pos.X < width;
-
-    private IEnumerable<MatrixObject> ObjectsToAdd(int width)
-    {
-        if (_maxObjects < _displayObjects.Count)
-        {
-            return [];
-        }
-
-        _objectBuildup += width * _addRate / 200;
-        var objectsToAdd = (int)_objectBuildup;
-        _objectBuildup -= objectsToAdd;
-
-        return Enumerable
-            .Range(0, objectsToAdd)
-            .SelectMany(e => _objectHandler.CreateNewMatrixLine(width));
-    }
-
-    private void PrintBenchValues(long time)
-    {
-        if (option.IsBench == true)
-        {
-            Console.Title = $"" +
-                $"| -d {_delay:00} " +
-                $"| -a {_addRate:00.00}/{option.AddRate:00.00} " +
-                $"| -m {time:00}/{option.MaxFrameTime:00} " +
-                $"| -o {_displayObjects.Count,6}/{option.MaxObjects} ";
-        }
-    }
-
-    private void LeaveMatrix()
-    {
-        Console.CursorVisible = true;
-        Console.ForegroundColor = _formerColor;
-        Console.SetCursorPosition(0, Console.WindowHeight + 1);
-    }
+public record MatrixChar(Shot Shot, char Char, RGB Rgb) : IMatrixConsoleChar
+{
+    public int Y { get; set; }
+    public string AnsiConsoleColor => Rgb.AnsiConsoleColor;
 }
