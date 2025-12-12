@@ -16,7 +16,7 @@ internal class Program
 
         var options = new MatrixOptions()
         {
-            Style = MatrixStyles.ShotCount
+            Style = MatrixStyles.GreenWhite
         };
 
         var matrix = new Matrix(options);

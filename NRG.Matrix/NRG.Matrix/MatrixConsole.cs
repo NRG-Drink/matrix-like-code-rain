@@ -13,18 +13,20 @@ public static class MatrixConsole
     {
         _width = Console.BufferWidth;
         _height = Console.BufferHeight;
-        _oldBuffer = Clear('0');
+        _oldBuffer = Clear();
         _buffer = Clear();
-        Console.Write("\x1b[?25l\x1b[J");
+        Console.Write("\x1b[?25l\x1b[2J");
     }
 
     public static void ClearBuffer() => _buffer = Clear();
 
+    private static ConsoleChar _clearChar = new(' ', new(MatrixConsoleColor.White));
+
     private static IMatrixConsoleChar[][] Clear(char c = ' ')
     {
-        IMatrixConsoleChar clearChar = new ConsoleChar(c, new(MatrixConsoleColor.White));
+        //IMatrixConsoleChar clearChar = new ConsoleChar(c, new(MatrixConsoleColor.White));
         var width = new IMatrixConsoleChar[_width];
-        Array.Fill(width, clearChar);
+        Array.Fill(width, _clearChar);
         var height = new IMatrixConsoleChar[_height][];
         for (var i = 0; i < height.Length; i++)
         {
@@ -44,22 +46,23 @@ public static class MatrixConsole
         _buffer[y][x] = c;
     }
 
-    public static void DrawBuffer()
-    {
-        //var debug = string.Join("\n", _buffer.Select(e => string.Join("", e.Select(e => e.Char))));
-        var sb = new StringBuilder("\x1b[J");
-        for (var i = 0; i < _buffer.Length; i++)
-        {
-            var line = ToLineString(_buffer[i]);
-            var fullLine = $"\x1b[{i + 1};0H{line}";
-            sb.Append(fullLine);
-        }
+    //public static void DrawBuffer()
+    //{
+    //    //var debug = string.Join("\n", _buffer.Select(e => string.Join("", e.Select(e => e.Char))));
+    //    var sb = new StringBuilder("\x1b[J");
+    //    for (var i = 0; i < _buffer.Length; i++)
+    //    {
+    //        var line = ToLineString(_buffer[i]);
+    //        var fullLine = $"\x1b[{i + 1};0H{line}";
+    //        sb.Append(fullLine);
+    //    }
 
-        Console.Write(sb.ToString());
-        Console.Write("\x1b[37m");
-    }
+    //    Console.Write(sb.ToString());
+    //    Console.Write("\x1b[37m");
+    //    _buffer = Clear();
+    //}
 
-    public static void DrawBufferChanged()
+    public static async Task DrawBufferChanged()
     {
         var changed = GetBufferChanges();
         var debug = string.Join("\n", changed.Select(e => string.Join("", e.Select(e => e ? '1' : '0'))));
@@ -85,8 +88,8 @@ public static class MatrixConsole
             }
         }
 
-        Console.Write(sb.ToString());
-        Console.Write("\x1b[37m");
+        await Console.Out.WriteAsync($"{sb}\x1b[37m");
+        //Console.Write($"{sb}\x1b[37m");
         _oldBuffer = _buffer;
         _buffer = Clear();
     }

@@ -7,6 +7,7 @@ public enum MatrixStyles
 {
     ZeroOne = 0,
     ShotCount = 1,
+    GreenWhite = 2,
 }
 
 public record MatrixOptions
@@ -14,6 +15,7 @@ public record MatrixOptions
     public MatrixStyles Style { get; set; }
 }
 
+// TODO: Implement char change
 public class Matrix(MatrixOptions options)
 {
     public async Task Enter(CancellationToken token)
@@ -24,11 +26,9 @@ public class Matrix(MatrixOptions options)
         var generateNewObjectTimeBase = TimeSpan.FromMilliseconds(30000);
         var generateNewObjectTime = generateNewObjectTimeBase;
         var shots = new List<Shot>();
-        var chars = new List<MatrixChar>();
 
-        //var shotCount = 0;
         var frameTime = Stopwatch.StartNew();
-        var targetFrameTime = 1000 / (float)100;
+        var targetFrameTime = (int)(1000 / (float)60);
         var shotFactory = new MatrixShotFactory();
 
         while (!token.IsCancellationRequested)
@@ -43,15 +43,24 @@ public class Matrix(MatrixOptions options)
 
             if (generateNewObjectSW.Elapsed > generateNewObjectTime)
             {
-                var shot = shotFactory.GenerateShot(options.Style, 8);
+                var shot = shotFactory.GenerateShot(options.Style, 15);
 
-                chars.AddRange(shot.Chars);
                 shots.Add(shot);
                 generateNewObjectSW.Restart();
             }
 
             var shotsToFall = shots.Where(e => e.IsExceeded).ToArray();
-            var charsToFall = chars.OrderByDescending(e => e.Shot.Z);
+            if (shotsToFall.Length is 0)
+            {
+                await Task.Delay(targetFrameTime);
+                frameTime.Restart();
+                continue;
+            }
+
+            var charsToFall = shots
+                .SelectMany(e => e.Chars)
+                .OrderByDescending(e => e.Shot.Z)
+                .ToArray();
             foreach (var o in charsToFall)
             {
                 MatrixConsole.Set(o.Shot.X, o.Y, o);
@@ -63,14 +72,23 @@ public class Matrix(MatrixOptions options)
                 shot.SW.Restart();
             }
 
-            MatrixConsole.DrawBufferChanged();
-            var wait = Math.Max(0, targetFrameTime - frameTime.Elapsed.TotalMilliseconds);
-            await Task.Delay((int)wait, token);
-            var fps = Math.Round(1 / frameTime.Elapsed.TotalSeconds);
-            Console.Title = $"FPS: {fps}";
-            //Console.Title = $"{frameTime.Elapsed.TotalMilliseconds}";
+            await MatrixConsole.DrawBufferChanged();
+            shots.RemoveAll(e => e.X >= (width + 20) || e.Chars.OrderBy(e => e.Y).First().Y > (height + 20));
+            var remainingFrameTime = targetFrameTime - (int)frameTime.Elapsed.TotalMilliseconds;
+            if (remainingFrameTime > 5)
+            {
+                await Task.Delay(remainingFrameTime);
+            }
+
+            PrintFps(frameTime.Elapsed.TotalSeconds, shots.Count);
             frameTime.Restart();
         }
+    }
+
+    private void PrintFps(double elapsedSeconds, int count)
+    {
+        var fps = Math.Round(1d / elapsedSeconds);
+        Console.Title = $"S: {count:D3} - FPS: {fps}";
     }
 }
 
