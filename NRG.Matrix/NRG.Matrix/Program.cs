@@ -14,7 +14,12 @@ internal class Program
             eventArgs.Cancel = true;
         };
 
-        var matrix = new Matrix();
+        var options = new MatrixOptions()
+        {
+            Style = MatrixStyles.ShotCount
+        };
+
+        var matrix = new Matrix(options);
         await matrix.Enter(tokenSource.Token);
         //Parser.Default.ParseArguments<Option>(args)
         //    .WithParsed(o =>
