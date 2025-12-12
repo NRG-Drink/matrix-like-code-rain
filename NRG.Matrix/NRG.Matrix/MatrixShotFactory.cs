@@ -1,13 +1,43 @@
 ﻿namespace NRG.Matrix;
 
+// TODO: Play around with bold characters
+// TODO: Rethink styles: what should a style control based on which parameters?
 public class MatrixShotFactory
 {
     private int _shotCount = 0;
+
     public Shot GenerateShot(MatrixStyles style, int length)
         => style switch
         {
-            MatrixStyles.ShotCount => ShotCount(length)
+            MatrixStyles.GreenWhite => GreenWhite(length),
+            MatrixStyles.ShotCount => ShotCount(length),
+            _ => GreenWhite(length)
         };
+
+    public Shot GreenWhite(int length)
+    {
+        length = length * 2;
+        var x = Random.Shared.Next(0, Console.BufferWidth + 1);
+        var z = (byte)Random.Shared.Next(0, 3);
+        var fallDelay = TimeSpan.FromMilliseconds(Random.Shared.Next(50, 500));
+        var shot = new Shot(x, z, fallDelay);
+
+        var y = 0;
+
+        var numberColor = new RGB(220, 220, 250);
+        var zeroColor = new RGB(30, 200, 60);
+        var lFactor = -50;
+
+        var head = new MatrixChar(shot, GetRandomChar(), numberColor.Luminos(z * lFactor)) { Y = y-- };
+        var tail = Enumerable.Range(0, length - 1)
+            .Select(e => new MatrixChar(shot, GetRandomChar(), zeroColor.Luminos(z * lFactor)) { Y = y-- });
+
+        shot.Chars = [head, .. tail];
+
+        return shot;
+    }
+
+    private char GetRandomChar() => (char)Random.Shared.Next(33, 90);
 
     public Shot ShotCount(int length)
     {
