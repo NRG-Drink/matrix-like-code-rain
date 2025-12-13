@@ -1,11 +1,12 @@
-﻿using System.Text;
+﻿using System.Diagnostics;
+using System.Text;
 
 namespace NRG.Matrix;
 
 public static class MatrixConsole
 {
-    private static IMatrixConsoleChar[][] _buffer = [];
-    private static IMatrixConsoleChar[][] _oldBuffer = [];
+    private readonly static StringBuilder _sb = new();
+    private  static IMatrixConsoleChar?[] _buffer = [];
     private static int _width;
     private static int _height;
 
@@ -13,27 +14,8 @@ public static class MatrixConsole
     {
         _width = Console.BufferWidth;
         _height = Console.BufferHeight;
-        _oldBuffer = Clear();
-        _buffer = Clear();
+        _buffer = new IMatrixConsoleChar[_height * _width];
         Console.Write("\x1b[?25l\x1b[2J");
-    }
-
-    public static void ClearBuffer() => _buffer = Clear();
-
-    private static ConsoleChar _clearChar = new(' ', new(MatrixConsoleColor.White));
-
-    private static IMatrixConsoleChar[][] Clear(char c = ' ')
-    {
-        //IMatrixConsoleChar clearChar = new ConsoleChar(c, new(MatrixConsoleColor.White));
-        var width = new IMatrixConsoleChar[_width];
-        Array.Fill(width, _clearChar);
-        var height = new IMatrixConsoleChar[_height][];
-        for (var i = 0; i < height.Length; i++)
-        {
-            height[i] = (IMatrixConsoleChar[])width.Clone();
-        }
-
-        return height;
     }
 
     public static void Set(int x, int y, IMatrixConsoleChar c)
@@ -43,93 +25,182 @@ public static class MatrixConsole
             return;
         }
 
-        _buffer[y][x] = c;
+        _buffer[y * _width + x] = c;
     }
 
-    //public static void DrawBuffer()
-    //{
-    //    //var debug = string.Join("\n", _buffer.Select(e => string.Join("", e.Select(e => e.Char))));
-    //    var sb = new StringBuilder("\x1b[J");
-    //    for (var i = 0; i < _buffer.Length; i++)
-    //    {
-    //        var line = ToLineString(_buffer[i]);
-    //        var fullLine = $"\x1b[{i + 1};0H{line}";
-    //        sb.Append(fullLine);
-    //    }
-
-    //    Console.Write(sb.ToString());
-    //    Console.Write("\x1b[37m");
-    //    _buffer = Clear();
-    //}
-
-    public static async Task DrawBufferChanged()
+    public static StringBuilder DrawBuffer()
     {
-        var changed = GetBufferChanges();
-        var debug = string.Join("\n", changed.Select(e => string.Join("", e.Select(e => e ? '1' : '0'))));
-        var sb = new StringBuilder();
+        _sb.Clear();
+        //var debugBuffer = string.Join("\n", _buffer.Select(e => e?.Char));
         var lastColor = string.Empty;
-        for (var y = 0; y < changed.Length; y++)
+        var chunks = _buffer.Chunk(_width);
+        var y = 0;
+        foreach (var ch in chunks)
         {
-            for (var x = 0; x < changed[y].Length; x++)
+            y++;
+            _sb.Append($"\x1b[{y};1H");
+            for (var x = 0; x < _width; x++)
             {
-                if (!changed[y][x])
+                var c = ch[x];
+                if (c is null)
                 {
+                    _sb.Append(' ');
                     continue;
                 }
 
-                var c = _buffer[y][x];
                 if (lastColor != c.AnsiConsoleColor)
                 {
-                    sb.Append($"\x1b[{c.AnsiConsoleColor}m");
+                    _sb.Append($"\x1b[{c.AnsiConsoleColor}m");
                     lastColor = c.AnsiConsoleColor;
                 }
 
-                sb.Append($"\x1b[{y+1};{x}H{c.Char}");
+                _sb.Append(c.Char);
             }
         }
 
-        await Console.Out.WriteAsync($"{sb}\x1b[37m");
-        //Console.Write($"{sb}\x1b[37m");
-        _oldBuffer = _buffer;
-        _buffer = Clear();
+        _sb.Append("\x1b[37m");
+        Array.Clear(_buffer);
+        return _sb;
     }
 
-    private static string ToLineString(IMatrixConsoleChar[] chars)
-    {
-        var sb = new StringBuilder();
-        var lastColor = string.Empty;
-        foreach (var c in chars)
-        {
-            if (lastColor != c.AnsiConsoleColor)
-            {
-                sb.Append($"\x1b[{c.AnsiConsoleColor}m");
-                lastColor = c.AnsiConsoleColor;
-            }
+    //public static StringBuilder DrawBufferChanged2(StringBuilder log, Stopwatch frameTime)
+    //{
+    //    log.AppendLine($"{frameTime.Elapsed.TotalMilliseconds:000.0000} - Start {nameof(DrawBufferChanged2)}");
+    //    _sb.Clear();
+    //    log.AppendLine($"{frameTime.Elapsed.TotalMilliseconds:000.0000} - _sb Buffer Cleared");
+    //    GetBufferChanges();
+    //    log.AppendLine($"{frameTime.Elapsed.TotalMilliseconds:000.0000} - Get Changes");
+    //    //var debugBuffer = string.Join("\n", _buffer.Select(e => string.Join("", e.Select(e => e?.Char))));
+    //    //var debugLast = string.Join("\n", _oldBuffer.Select(e => string.Join("", e.Select(e => e?.Char))));
+    //    //var debug = string.Join("\n", _changedBuffer.Select(e => string.Join("", e.Select(e => e ? '1' : '0'))));
+    //    //var sb = new StringBuilder();
+    //    var lastColor = string.Empty;
+    //    for (var i = 0; i < _changedBuffer.Length; i++)
+    //    {
+    //        var y = (int)i / _width;
+    //        var x = (int)i % _width;
+    //        var lastX = -10;
+    //        if (!_changedBuffer[i])
+    //        {
+    //            continue;
+    //        }
 
-            sb.Append(c.Char);
-        }
+    //        var c = _buffer[i];
+    //        if (c is null)
+    //        {
+    //            continue;
+    //        }
 
-        return sb.ToString();
-    }
+    //        if (lastColor != c.AnsiConsoleColor)
+    //        {
+    //            _sb.Append($"\x1b[{c.AnsiConsoleColor}m");
+    //            lastColor = c.AnsiConsoleColor;
+    //        }
 
-    private static bool[][] GetBufferChanges()
-    {
-        var result = new bool[_buffer.Length][];
-        for (var y = 0; y < _buffer.Length; y++)
-        {
-            result[y] = new bool[_buffer[y].Length];
-            for (var x = 0; x < _buffer[y].Length; x++)
-            {
-                var a = _buffer[y][x];
-                var b = _oldBuffer[y][x];
-                var hasCharChanged = a.Char != b.Char;
-                var hasColorChanged = a.AnsiConsoleColor != b.AnsiConsoleColor;
-                result[y][x] = hasCharChanged || hasColorChanged;
-            }
-        }
+    //        if (x == lastX + 1)
+    //        {
+    //            _sb.Append(c.Char);
 
-        return result;
-    }
+    //        }
+    //        else
+    //        {
+    //            _sb.Append($"\x1b[{y + 1};{x + 1}H{c.Char}");
+    //        }
+
+    //        _oldBuffer[i] = c;
+    //        lastX = x;
+    //    }
+
+    //    log.AppendLine($"{frameTime.Elapsed.TotalMilliseconds:000.0000} - Write Changes to _sb");
+    //    //var debugBuffer2 = string.Join("\n", _buffer.Select(e => string.Join("", e.Select(e => e?.Char))));
+    //    //Clear(_buffer);
+    //    //Clear(_changedBuffer);
+    //    Array.Clear(_buffer);
+    //    Array.Clear(_changedBuffer);
+    //    log.AppendLine($"{frameTime.Elapsed.TotalMilliseconds:000.0000} - Clear Buffers");
+    //    _sb.Append("\x1b[37m");
+    //    //return Console.Out.WriteAsync(_sb);
+    //    return _sb;
+    //}
+
+    //public static Task DrawBufferChanged()
+    //{
+    //    //var debugBuffer = string.Join("\n", _buffer.Select(e => string.Join("", e.Select(e => e?.Char))));
+    //    //var debugLast = string.Join("\n", _oldBuffer.Select(e => string.Join("", e.Select(e => e?.Char))));
+    //    var changed = GetBufferChanges();
+    //    //var debug = string.Join("\n", _changedBuffer.Select(e => string.Join("", e.Select(e => e ? '1' : '0'))));
+    //    //var sb = new StringBuilder();
+    //    var lastColor = string.Empty;
+    //    for (var y = 0; y < changed.Length; y++)
+    //    {
+    //        for (var x = 0; x < changed[y].Length; x++)
+    //        {
+    //            if (!changed[y][x])
+    //            {
+    //                continue;
+    //            }
+
+    //            var c = _buffer[y][x];
+    //            if (c is null)
+    //            {
+    //                continue;
+    //            }
+
+    //            if (lastColor != c.AnsiConsoleColor)
+    //            {
+    //                _sb.Append($"\x1b[{c.AnsiConsoleColor}m");
+    //                lastColor = c.AnsiConsoleColor;
+    //            }
+
+    //            _sb.Append($"\x1b[{y + 1};{x + 1}H{c.Char}");
+    //        }
+    //    }
+
+    //    for (var i = 0; i < _buffer.Length; i++)
+    //    {
+    //        Array.Copy(_buffer[i], _oldBuffer[i], _buffer[i].Length);
+    //    }
+
+    //    Clear(_buffer);
+    //    var message = $"{_sb}\x1b[37m";
+    //    _sb.Clear();
+    //    //Console.Write(message);
+    //    return Console.Out.WriteAsync(message);
+    //    //return Console.Out.WriteAsync($"{sb}\x1b[37m");
+    //}
+
+    //private static string ToLineString(IMatrixConsoleChar[] chars)
+    //{
+    //    var sb = new StringBuilder();
+    //    var lastColor = string.Empty;
+    //    foreach (var c in chars)
+    //    {
+    //        if (lastColor != c.AnsiConsoleColor)
+    //        {
+    //            sb.Append($"\x1b[{c.AnsiConsoleColor}m");
+    //            lastColor = c.AnsiConsoleColor;
+    //        }
+
+    //        sb.Append(c.Char);
+    //    }
+
+    //    return sb.ToString();
+    //}
+
+    //private static void GetBufferChanges()
+    //{
+    //    for (var x = 0; x < _buffer.Length; x++)
+    //    {
+    //        var a = _buffer[x];
+    //        var b = _oldBuffer[x];
+    //        var hasChanged = a?.Char != b?.Char || a?.AnsiConsoleColor != b?.AnsiConsoleColor;
+    //        _changedBuffer[x] = hasChanged;
+    //        if (hasChanged && a is null)
+    //        {
+    //            _buffer[x] = _clearChar;
+    //        }
+    //    }
+    //}
 }
 
 public record ConsoleChar(char Char, BasicColor BasicColor) : IMatrixConsoleChar
@@ -157,8 +228,8 @@ public record RGB(byte R, byte G, byte B) : IConsoleColor
 
     public RGB Luminos(int percentage)
     {
-        var factor = (100 - percentage);
-        return new((byte)(R * 100 / factor), (byte)(G * 100 / factor), (byte)(B * 100 / factor));
+        var factor = Math.Max(1, (100 - percentage));
+        return new((byte)(R * factor / 100), (byte)(G * factor / 100), (byte)(B * factor / 100));
     }
 }
 

@@ -1,12 +1,10 @@
-﻿using CommandLine;
-using NRG.Matrix.Models;
-
-namespace NRG.Matrix;
+﻿namespace NRG.Matrix;
 
 internal class Program
 {
     static async Task Main(string[] args)
     {
+        Console.OutputEncoding = System.Text.Encoding.UTF8;
         using var tokenSource = new CancellationTokenSource();
         Console.CancelKeyPress += (sender, eventArgs) =>
         {
