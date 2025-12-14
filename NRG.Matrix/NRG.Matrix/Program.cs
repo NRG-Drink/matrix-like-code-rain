@@ -4,7 +4,7 @@ internal class Program
 {
     static async Task Main(string[] args)
     {
-        Console.OutputEncoding = System.Text.Encoding.UTF8;
+        // Handle cancellation with CTRL+C
         using var tokenSource = new CancellationTokenSource();
         Console.CancelKeyPress += (sender, eventArgs) =>
         {
@@ -12,18 +12,7 @@ internal class Program
             eventArgs.Cancel = true;
         };
 
-        var options = new MatrixOptions()
-        {
-            Style = MatrixStyles.GreenWhite
-        };
-
-        var matrix = new Matrix(options);
+        var matrix = new Matrix();
         await matrix.Enter(tokenSource.Token);
-        //Parser.Default.ParseArguments<Option>(args)
-        //    .WithParsed(o =>
-        //    {
-        //        var matrix = new Matrix(o);
-        //        matrix.Enter();
-        //    });
     }
 }
