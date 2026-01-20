@@ -23,7 +23,7 @@ public class StyleGreenWhite : IMatrixStyle
     private readonly List<CharDynamic> _chars = [];
     private readonly List<IAnsiConsoleChar> _statistics = [];
     private readonly List<IAnsiConsoleChar> _controls = [];
-    private readonly RGB _statisticColor = new(60, 60, 250);
+    private readonly RGB _statisticColor = new(40, 40, 190);
     private readonly RGB _controlColor = new(120, 40, 40);
 
     private readonly Stopwatch _generateNewSW = Stopwatch.StartNew();
@@ -34,6 +34,13 @@ public class StyleGreenWhite : IMatrixStyle
     private bool _showControlsPanel = true;
     private readonly Queue<long> _frameTimeHistory = [];
 
+    private readonly KeyInputHandler _keyInputHandler = new KeyInputHandler();
+
+    public StyleGreenWhite()
+    {
+        AddKeyInputHandlers();
+    }
+
     public void SetFrametime(long frametime)
     {
         if (_frameTimeHistory.Count >= 100)
@@ -42,57 +49,6 @@ public class StyleGreenWhite : IMatrixStyle
         }
 
         _frameTimeHistory.Enqueue(frametime);
-    }
-
-    public Task HandleKeyInput(ConsoleKeyInfo keyInfo)
-    {
-        if (keyInfo.Modifiers is ConsoleModifiers.None)
-        {
-            if (keyInfo.Key is ConsoleKey.S)
-            {
-                _showStatisticsPanel = !_showStatisticsPanel;
-            }
-            else if (keyInfo.Key is ConsoleKey.C)
-            {
-                _showControlsPanel = !_showControlsPanel;
-            }
-        }
-        // Handle generate new speed.
-        else if (keyInfo.Modifiers is ConsoleModifiers.Control)
-        {
-            if (keyInfo.Key is ConsoleKey.UpArrow or ConsoleKey.RightArrow)
-            {
-                _generateNewTimeBase = (int)(_generateNewTimeBase / 1.01);
-            }
-            else if (keyInfo.Key is ConsoleKey.DownArrow or ConsoleKey.LeftArrow)
-            {
-                _generateNewTimeBase = (int)(_generateNewTimeBase * 1.01);
-            }
-
-            _generateNewTime = _generateNewTimeBase / _display.Width;
-        }
-        // Handle fall-delay speed and spread change.
-        else if (keyInfo.Modifiers is ConsoleModifiers.Shift)
-        {
-            if (keyInfo.Key is ConsoleKey.UpArrow)
-            {
-                _fallDelay = new(_fallDelay.Number + 5, _fallDelay.Spread);
-            }
-            else if (keyInfo.Key is ConsoleKey.DownArrow)
-            {
-                _fallDelay = new(_fallDelay.Number - 5, _fallDelay.Spread);
-            }
-            else if (keyInfo.Key is ConsoleKey.RightArrow)
-            {
-                _fallDelay = new(_fallDelay.Number, _fallDelay.Spread + 5);
-            }
-            else if (keyInfo.Key is ConsoleKey.LeftArrow)
-            {
-                _fallDelay = new(_fallDelay.Number, _fallDelay.Spread - 5);
-            }
-        }
-
-        return Task.CompletedTask;
     }
 
     public Task<bool> UpdateInternalObjects()
@@ -168,7 +124,6 @@ public class StyleGreenWhite : IMatrixStyle
             chars = chars.Concat(_controls);
         }
 
-        //foreach (var c in _chars.Concat(_statistics).Concat(_controls))
         foreach (var c in chars)
         {
             var xy = new XY(c.X, c.Y);
@@ -187,24 +142,10 @@ public class StyleGreenWhite : IMatrixStyle
         await _display.Display(ordered);
     }
 
-    private IAnsiConsoleChar[] ToAnsiConsoleChars(int x, int y, int z, string text, RGB color)
+    public Task HandleKeyInput(ConsoleKeyInfo keyInfo)
     {
-        var chars = new List<IAnsiConsoleChar>();
-        var lines = text.Split(Environment.NewLine);
-        for (var i = 0; i < lines.Length; i++)
-        {
-            var line = lines[i].Select((e, si) => new CharStatic()
-            {
-                Char = e,
-                X = x + si,
-                Y = y + i,
-                Z = z,
-                AnsiColor = color.AnsiConsoleColor,
-            });
-            chars.AddRange(line);
-        }
-
-        return [.. chars];
+        _keyInputHandler.ExecuteFirstMatchingHandler(keyInfo);
+        return Task.CompletedTask;
     }
 
     public Shot GenerateShot(int length = 20)
@@ -226,6 +167,45 @@ public class StyleGreenWhite : IMatrixStyle
         shot.Chars = chars;
 
         return shot;
+    }
+
+    private void AddKeyInputHandlers()
+    {
+        _keyInputHandler
+            .AddGroup(e => e.Modifiers is ConsoleModifiers.None)
+                .AddHandler(e => e.Key is ConsoleKey.S, e => _showStatisticsPanel = !_showStatisticsPanel)
+                .AddHandler(e => e.Key is ConsoleKey.C, e => _showControlsPanel = !_showControlsPanel)
+                .CloseGroup()
+            .AddGroup(e => e.Modifiers is ConsoleModifiers.Control)
+                .AddHandler(e => e.Key is ConsoleKey.UpArrow, e => _generateNewTimeBase = (int)(_generateNewTimeBase / 1.01))
+                .AddHandler(e => e.Key is ConsoleKey.DownArrow, e => _generateNewTimeBase = (int)(_generateNewTimeBase * 1.01))
+                .CloseGroup(e => _generateNewTime = _generateNewTimeBase / _display.Width)
+            .AddGroup(e => e.Modifiers is ConsoleModifiers.Shift)
+                .AddHandler(e => e.Key is ConsoleKey.UpArrow, e => _fallDelay = new(_fallDelay.Number + 5, _fallDelay.Spread))
+                .AddHandler(e => e.Key is ConsoleKey.DownArrow, e => _fallDelay = new(_fallDelay.Number - 5, _fallDelay.Spread))
+                .AddHandler(e => e.Key is ConsoleKey.RightArrow, e => _fallDelay = new(_fallDelay.Number, _fallDelay.Spread + 5))
+                .AddHandler(e => e.Key is ConsoleKey.LeftArrow, e => _fallDelay = new(_fallDelay.Number, _fallDelay.Spread - 5))
+                .CloseGroup();
+    }
+
+    private IAnsiConsoleChar[] ToAnsiConsoleChars(int x, int y, int z, string text, RGB color)
+    {
+        var chars = new List<IAnsiConsoleChar>();
+        var lines = text.Split(Environment.NewLine);
+        for (var i = 0; i < lines.Length; i++)
+        {
+            var line = lines[i].Select((e, si) => new StaticChar()
+            {
+                Char = e,
+                X = x + si,
+                Y = y + i,
+                Z = z,
+                AnsiColor = color.AnsiConsoleColor,
+            });
+            chars.AddRange(line);
+        }
+
+        return [.. chars];
     }
 
     private void UpdateStatistics()
@@ -262,7 +242,7 @@ public class StyleGreenWhite : IMatrixStyle
             $"{Environment.NewLine}C: Controls (this)" +
             $"{Environment.NewLine}S: Show Statistics Panel" +
             $"{Environment.NewLine}SHIFT+Arrows: Shot Speed" +
-            $"{Environment.NewLine}CTRL+Arrows: Object Generation Time";
+            $"{Environment.NewLine}CTRL+Arrows: Object Generation ";
 
         return ToAnsiConsoleChars(1, _display.Height - 5, 98, controlText, _controlColor);
     }
