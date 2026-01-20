@@ -21,6 +21,13 @@ public class Matrix
             }
 
             await style.DisplayFrame();
+            if (Console.KeyAvailable)
+            {
+                var key = Console.ReadKey(true);
+                await style.HandleKeyInput(key);
+            }
+
+            style.SetFrametime(frameTime.ElapsedMilliseconds);
             await WaitFrameTime(frameTimeTarget, frameTime.ElapsedMilliseconds, token);
 
             Console.Title = $"{frameTime.Elapsed.TotalMilliseconds:000.00}";
