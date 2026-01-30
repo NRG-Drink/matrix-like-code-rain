@@ -1,17 +1,19 @@
-﻿using CommandLine;
-using NRG.Matrix.Models;
-
-namespace NRG.Matrix;
+﻿namespace NRG.Matrix;
 
 internal class Program
 {
-    static void Main(string[] args)
+    static async Task Main(string[] args)
     {
-        Parser.Default.ParseArguments<Option>(args)
-            .WithParsed(o =>
-            {
-                var matrix = new Matrix(o);
-                matrix.Enter();
-            });
+        // Handle cancellation with CTRL+C
+        using var tokenSource = new CancellationTokenSource();
+        Console.CancelKeyPress += (sender, eventArgs) =>
+        {
+            tokenSource.Cancel();
+            eventArgs.Cancel = true;
+            Console.CursorVisible = true;
+        };
+
+        var matrix = new Matrix();
+        await matrix.Enter(tokenSource.Token);
     }
 }
