@@ -23,15 +23,15 @@ public class StyleGreenWhite : IMatrixStyle
     private readonly List<CharDynamic> _chars = [];
     private readonly List<IAnsiConsoleChar> _statistics = [];
     private readonly List<IAnsiConsoleChar> _controls = [];
-    private readonly RGB _statisticColor = new(40, 40, 190);
-    private readonly RGB _controlColor = new(120, 40, 40);
+    private readonly RGB _statisticColor = new(80, 80, 255);
+    private readonly RGB _controlColor = new(180, 0, 0);
 
     private readonly Stopwatch _generateNewSW = Stopwatch.StartNew();
     private NumberWithRandomness _fallDelay = new(225, 175);
     private int _generateNewTimeBase = 20000;
-    private int _generateNewTime = 0;
-    private bool _showStatisticsPanel = true;
-    private bool _showControlsPanel = true;
+    private int _generateNewTime = 1;
+    private bool _showStatisticsPanel = false;
+    private bool _showControlsPanel = false;
     private readonly Queue<long> _frameTimeHistory = [];
 
     private readonly KeyInputHandler _keyInputHandler = new KeyInputHandler();
@@ -55,7 +55,7 @@ public class StyleGreenWhite : IMatrixStyle
     {
         if (_display.HasResolutionChanged(out var width, out var height))
         {
-            _generateNewTime = _generateNewTimeBase / width;
+            _generateNewTime = Math.Max(_generateNewTimeBase / width, 1);
             _controls.Clear();
             _controls.AddRange(GetControlChars());
         }
@@ -177,15 +177,41 @@ public class StyleGreenWhite : IMatrixStyle
                 .AddHandler(e => e.Key is ConsoleKey.C, e => _showControlsPanel = !_showControlsPanel)
                 .CloseGroup()
             .AddGroup(e => e.Modifiers is ConsoleModifiers.Control)
-                .AddHandler(e => e.Key is ConsoleKey.UpArrow, e => _generateNewTimeBase = (int)(_generateNewTimeBase / 1.01))
-                .AddHandler(e => e.Key is ConsoleKey.DownArrow, e => _generateNewTimeBase = (int)(_generateNewTimeBase * 1.01))
-                .CloseGroup(e => _generateNewTime = _generateNewTimeBase / _display.Width)
+                //.AddHandler(e => e.Key is ConsoleKey.UpArrow, e => _generateNewTimeBase = Math.Max((int)(_generateNewTimeBase / 1.01), 1))
+                .AddHandler(e => e.Key is ConsoleKey.UpArrow, SpeedUp)
+                //.AddHandler(e => e.Key is ConsoleKey.DownArrow, e => _generateNewTimeBase = _generateNewTimeBase = (int)(_generateNewTimeBase * 1.01))
+                .AddHandler(e => e.Key is ConsoleKey.DownArrow, SlowDown)
+                .CloseGroup(e => _generateNewTime = _display.Width <= 0 ? _generateNewTimeBase : Math.Max(_generateNewTimeBase / _display.Width, 1))
             .AddGroup(e => e.Modifiers is ConsoleModifiers.Shift)
                 .AddHandler(e => e.Key is ConsoleKey.UpArrow, e => _fallDelay = new(_fallDelay.Number + 5, _fallDelay.Spread))
                 .AddHandler(e => e.Key is ConsoleKey.DownArrow, e => _fallDelay = new(_fallDelay.Number - 5, _fallDelay.Spread))
                 .AddHandler(e => e.Key is ConsoleKey.RightArrow, e => _fallDelay = new(_fallDelay.Number, _fallDelay.Spread + 5))
                 .AddHandler(e => e.Key is ConsoleKey.LeftArrow, e => _fallDelay = new(_fallDelay.Number, _fallDelay.Spread - 5))
                 .CloseGroup();
+    }
+
+    private void SpeedUp(ConsoleKeyInfo k)
+    {
+        var n = _generateNewTimeBase / 1.01;
+        var x = (int)n;
+        var max = Math.Max(x, 1);
+
+        _generateNewTimeBase = max;
+    }
+
+    private void SlowDown(ConsoleKeyInfo k)
+    {
+        var p = _generateNewTimeBase;
+        var n = _generateNewTimeBase * 1.01;
+        var x = (int)n;
+        var max = Math.Max(x, 1);
+        if (max <= p)
+        {
+            max++;
+        }
+
+        _generateNewTimeBase = max;
+
     }
 
     private IAnsiConsoleChar[] ToAnsiConsoleChars(int x, int y, int z, string text, RGB color)
@@ -231,6 +257,8 @@ public class StyleGreenWhite : IMatrixStyle
             $"{n}FPS (theo): {(avg > 0 ? (int)(1000 / avg) : 1000):00000} fps" +
             $"{n}Shot Count: {_shots.Count:00000} pcs" +
             $"{n}Char Count: {_chars.Count:00000} pcs" +
+            $"{n}New Base:   {_generateNewTimeBase:00000} ms" +
+            $"{n}Cons Width: {Console.BufferWidth:00000} crs" +
             $"{n}New Object: {_generateNewTime:00000} ms" +
             $"{n}Falltime: {_fallDelay} ms";
         _statistics.AddRange(ToAnsiConsoleChars(1, 1, 99, statisticsText, _statisticColor));

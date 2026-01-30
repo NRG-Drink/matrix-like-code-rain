@@ -7,6 +7,7 @@ public class Matrix
 {
     public async Task Enter(CancellationToken token)
     {
+        Console.Title = $"Matrix";
         var style = new StyleGreenWhite();
         var frameTime = Stopwatch.StartNew();
         var frameTimeTarget = 1000 / 60;
@@ -30,7 +31,7 @@ public class Matrix
             style.SetFrametime(frameTime.ElapsedMilliseconds);
             await WaitFrameTime(frameTimeTarget, frameTime.ElapsedMilliseconds, token);
 
-            Console.Title = $"{frameTime.Elapsed.TotalMilliseconds:000.00}";
+            Console.Title = $"Matrix";
             frameTime.Restart();
         }
     }

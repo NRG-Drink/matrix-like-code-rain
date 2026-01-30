@@ -2,14 +2,11 @@
 
 public readonly struct NumberWithRandomness(int number, int spread)
 {
-    public int Number => number;
-    public int Spread => spread;
+    public int Number => Math.Max(number, 0);
+    public int Spread => Math.Max(spread, 0);
 
-    public int NumberWithSpread => Random.Shared.Next(number - spread, number + spread);
+    public int NumberWithSpread => Random.Shared.Next(Number - Spread, Number + Spread + 1);
     public TimeSpan TimeWithSpread => TimeSpan.FromMilliseconds(NumberWithSpread);
 
-    public override string ToString()
-    {
-        return $"{Number}/{Spread}";
-    }
+    public override string ToString() => $"{Number}/{Spread}";
 }
