@@ -12,10 +12,10 @@ public class StyleGreenWhite : IMatrixStyle
     private readonly RGB _colorHead = new(220, 220, 250);
     private readonly RGB _colorTail = new(30, 200, 60);
     private readonly char[] _greenWhiteChars = [
-        .. Alphabeth.LatinUpper,
-        .. Alphabeth.Numbers,
-        .. Alphabeth.Katakana,
-        .. Alphabeth.Symbols,
+        .. Alpabeth.LatinUpper,
+        .. Alpabeth.Numbers,
+        .. Alpabeth.Katakana,
+        .. Alpabeth.Symbols,
     ];
 
     private readonly AnsiConsolePrintAll _display = new();
@@ -63,13 +63,13 @@ public class StyleGreenWhite : IMatrixStyle
         var isGenerateNew = _generateNewTime < _generateNewSW.ElapsedMilliseconds;
         var isFall = _shots.Any(e => e.IsExpired);
         var isChar = _chars.Any(e => e.IsExpired);
-        if (!isGenerateNew && !isFall && !isChar)
+        if (!(isGenerateNew || isFall || isChar))
         {
             return Task.FromResult(false);
         }
 
         // Generate new shot
-        if (_generateNewTime < _generateNewSW.ElapsedMilliseconds)
+        if (isGenerateNew)
         {
             var shot = GenerateShot(20);
             _shots.Add(shot);
