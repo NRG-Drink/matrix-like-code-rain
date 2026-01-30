@@ -3,15 +3,6 @@ using System.Diagnostics;
 
 namespace NRG.Matrix.Models;
 
-public class StaticChar : IAnsiConsoleChar, ICanFall
-{
-    public int Y { get; set; }
-    public int X { get; set; }
-    public int Z { get; set; }
-    public char Char { get; set; }
-    public string AnsiColor { get; set; } = "38;2;255;255;255m";
-}
-
 public class CharDynamic : IAnsiConsoleChar, ICanFall
 {
     private readonly Stopwatch _sw = Stopwatch.StartNew();

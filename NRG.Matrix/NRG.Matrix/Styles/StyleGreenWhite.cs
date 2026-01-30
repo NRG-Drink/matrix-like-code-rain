@@ -218,7 +218,7 @@ public class StyleGreenWhite : IMatrixStyle
         var lines = text.Split(Environment.NewLine);
         for (var i = 0; i < lines.Length; i++)
         {
-            var line = lines[i].Select((e, si) => new StaticChar()
+            var line = lines[i].Select((e, si) => new CharStatic()
             {
                 Char = e,
                 X = x + si,
