@@ -9,6 +9,14 @@ public class AnsiConsolePrintAll : IAnsiConsole
     public int Width;
     public int Height;
 
+    public AnsiConsolePrintAll()
+    {
+        // Needed to display special characters.
+        Console.OutputEncoding = Encoding.UTF8;
+        Console.Write("\x1b[?25l");
+        Initialize();
+    }
+
     public bool HasResolutionChanged(out int width, out int height)
     {
         var hasChanged = Width != Console.BufferWidth || Height != Console.BufferHeight;
@@ -38,12 +46,9 @@ public class AnsiConsolePrintAll : IAnsiConsole
 
     private void Initialize()
     {
-        // Needed to display special characters.
-        Console.OutputEncoding = Encoding.UTF8;
         Width = Console.BufferWidth;
         Height = Console.BufferHeight;
         _buffer = new IAnsiConsoleChar[Height * Width];
-        Console.Write("\x1b[?25l");
     }
 
     private void Set(int x, int y, IAnsiConsoleChar c)
