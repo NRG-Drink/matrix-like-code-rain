@@ -13,7 +13,7 @@ public class Shot
         YBottom = y;
         YTop = y - len;
         Z = z;
-        ChangeTimeMilliseconds= time;
+        ChangeTimeMilliseconds = time;
         SW.Restart();
     }
 

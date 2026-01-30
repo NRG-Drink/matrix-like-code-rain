@@ -1,6 +1,4 @@
-﻿using NRG.Matrix.Settings;
-
-namespace NRG.Matrix.Styles;
+﻿namespace NRG.Matrix.Styles;
 
 public interface IMatrixStyle
 {

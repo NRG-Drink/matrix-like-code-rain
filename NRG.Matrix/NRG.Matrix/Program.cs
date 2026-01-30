@@ -10,6 +10,7 @@ internal class Program
         {
             tokenSource.Cancel();
             eventArgs.Cancel = true;
+            Console.CursorVisible = true;
         };
 
         var matrix = new Matrix();

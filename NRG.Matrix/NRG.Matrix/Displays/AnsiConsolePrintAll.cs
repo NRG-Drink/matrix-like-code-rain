@@ -67,7 +67,7 @@ public class AnsiConsolePrintAll : IAnsiConsole
             var y = (int)(i / Width);
             if (y != lastY)
             {
-                _sb.Append($"\x1b[{y+1};1H");
+                _sb.Append($"\x1b[{y + 1};1H");
                 lastY = y;
             }
 
