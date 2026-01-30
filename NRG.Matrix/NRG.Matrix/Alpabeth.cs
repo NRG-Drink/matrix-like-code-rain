@@ -1,6 +1,6 @@
 ﻿namespace NRG.Matrix;
 
-public static class Alphabeth
+public static class Alpabeth
 {
     public static char[] LatinUpper { get; } = [.. "ABCDEFGHIJKLMNOPQRSTUVWXYZ"];
     public static char[] Numbers { get; } = [.. "0123456789"];

@@ -13,22 +13,20 @@ public class CharDynamic : IAnsiConsoleChar, ICanFall
     public void Init(Shot shot, char[] abc, RGB color, int time, int y)
     {
         Shot = shot;
-        Alphabeth = abc;
+        Alpabeth = abc;
         Rgb = color;
         ChangeTimeMilliseconds = time;
-        Char = Alphabeth[Random.Shared.Next(0, Alphabeth.Length)];
+        Char = Alpabeth[Random.Shared.Next(0, Alpabeth.Length)];
         Y = y;
         _sw.Restart();
-        AnsiConsoleColor = Rgb.AnsiConsoleColor;
         AnsiColor = Rgb.AnsiConsoleColor;
     }
 
     public Shot Shot { get; set; }
-    public char[] Alphabeth { get; set; }
+    public char[] Alpabeth { get; set; }
     public RGB Rgb { get; set; }
     public int ChangeTimeMilliseconds { get; set; }
     public int Y { get; set; }
-    public string AnsiConsoleColor { get; private set; }
     public bool IsExpired => _sw.Elapsed.TotalMilliseconds >= ChangeTimeMilliseconds;
     public char Char { get; set; }
     public int X => Shot.X;
@@ -39,7 +37,7 @@ public class CharDynamic : IAnsiConsoleChar, ICanFall
     {
         if (IsExpired)
         {
-            Char = Alphabeth[Random.Shared.Next(0, Alphabeth.Length)];
+            Char = Alpabeth[Random.Shared.Next(0, Alpabeth.Length)];
             _sw.Restart();
         }
     }
