@@ -19,8 +19,7 @@ Use these repository-wide instructions for any work in this repo.
 
 If you’re unsure where a change belongs, start at the style (`Styles/`) and follow calls into models/display.
 
-For C#-specific formatting and conventions, also follow the path-specific rules in `.github/instructions/csharp.instructions.md`.
-
+For C#-specific formatting and conventions, also follow the path-specific rules in `.github/instructions/csharp.instructions.md`.For writing tests in the `NRG.Matrix.Tests` project, follow `.github/instructions/tunit-tests.instructions.md`.
 ## Build / run / validate (Windows-friendly)
 
 Prefer `dotnet` CLI commands from the repo root.
