@@ -3,5 +3,5 @@
 public interface IAnsiConsole
 {
     public bool HasResolutionChanged(out int width, out int height);
-    public Task Display(IEnumerable<IAnsiConsoleChar> chars);
+    public void Display(IEnumerable<IAnsiConsoleChar> chars);
 }

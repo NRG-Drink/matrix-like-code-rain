@@ -14,6 +14,7 @@ public class Shot
         YTop = y - len;
         Z = z;
         ChangeTimeMilliseconds = time;
+        CharsLength = len;
         SW.Restart();
     }
 
@@ -26,14 +27,18 @@ public class Shot
     public bool IsExpired => SW.ElapsedMilliseconds >= ChangeTimeMilliseconds;
     public Stopwatch SW { get; } = Stopwatch.StartNew();
     public ICanFall[] Chars { get; set; } = [];
+    /// <summary>
+    /// The actual number of characters used in the Chars array (may be less than Chars.Length due to ArrayPool).
+    /// </summary>
+    public int CharsLength { get; set; }
 
     public void Fall(int yFall = 1)
     {
         YTop += yFall;
         YBottom += yFall;
-        foreach (var c in Chars)
+        for (var i = 0; i < CharsLength; i++)
         {
-            c.Y += yFall;
+            Chars[i].Y += yFall;
         }
     }
 }

@@ -15,6 +15,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NRG.Matrix.Build", "NRG.Matrix.Build\NRG.Matrix.Build.csproj", "{80C49D57-835F-4E53-9F3F-DD6B99238D0F}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NRG.Matrix.Tests", "NRG.Matrix.Tests\NRG.Matrix.Tests.csproj", "{3315831C-5BDF-499C-9151-385AAD37A711}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -29,6 +31,10 @@ Global
 		{80C49D57-835F-4E53-9F3F-DD6B99238D0F}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{80C49D57-835F-4E53-9F3F-DD6B99238D0F}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{80C49D57-835F-4E53-9F3F-DD6B99238D0F}.Release|Any CPU.Build.0 = Release|Any CPU
+		{3315831C-5BDF-499C-9151-385AAD37A711}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{3315831C-5BDF-499C-9151-385AAD37A711}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{3315831C-5BDF-499C-9151-385AAD37A711}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{3315831C-5BDF-499C-9151-385AAD37A711}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

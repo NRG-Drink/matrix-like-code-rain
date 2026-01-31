@@ -13,7 +13,7 @@ public class Matrix
         var frameTimeTarget = 1000 / 60;
         while (!token.IsCancellationRequested)
         {
-            var hasChanged = await style.UpdateInternalObjects();
+            var hasChanged = style.UpdateInternalObjects();
             if (!hasChanged)
             {
                 await WaitFrameTime(frameTimeTarget, frameTime.ElapsedMilliseconds, token);
@@ -21,11 +21,11 @@ public class Matrix
                 continue;
             }
 
-            await style.DisplayFrame();
+            style.DisplayFrame();
             if (Console.KeyAvailable)
             {
                 var key = Console.ReadKey(true);
-                await style.HandleKeyInput(key);
+                style.HandleKeyInput(key);
             }
 
             style.SetFrametime(frameTime.ElapsedMilliseconds);

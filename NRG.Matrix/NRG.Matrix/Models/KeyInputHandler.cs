@@ -19,14 +19,16 @@ public class KeyInputHandler
 
     public bool ExecuteFirstMatchingHandler(ConsoleKeyInfo key)
     {
-        var first = _keyHandlers.FirstOrDefault(e => e.Key.Invoke(key));
-        if (first.Key is null)
+        foreach (var handler in _keyHandlers)
         {
-            return false;
+            if (handler.Key.Invoke(key))
+            {
+                handler.Value.Invoke(key);
+                return true;
+            }
         }
 
-        first.Value.Invoke(key);
-        return true;
+        return false;
     }
 }
 
