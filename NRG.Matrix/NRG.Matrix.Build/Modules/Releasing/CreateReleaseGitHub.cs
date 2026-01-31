@@ -30,7 +30,7 @@ public class CreateReleaseGitHub : Module<Release>
         {
             Name = version,
             Draft = true,
-            Prerelease = context.Git().Information.BranchName is var b && (b == "main" || b == "master"),
+            Prerelease = context.Git().Information.BranchName is var b && !(b == "main" || b == "master"),
             GenerateReleaseNotes = true,
             TargetCommitish = context.Git().Information.LastCommitSha,
         };
