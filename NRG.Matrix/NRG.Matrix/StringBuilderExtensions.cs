@@ -30,11 +30,7 @@ public static class StringBuilderExtensions
         // Append the number itself
         if (value == 0)
         {
-            // Already handled by padding if width > 0, but if width is 0, append 0
-            if (digits == 1 && width <= 1)
-            {
-                sb.Append('0');
-            }
+            sb.Append('0');
         }
         else
         {
