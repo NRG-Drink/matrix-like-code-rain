@@ -34,4 +34,4 @@ jobs:
         working-directory: "NRG.Matrix/NRG.Matrix.Build"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          NUGETSTORE__API_KEY: ${{ secrets.NUGETSTORE__API_KEY }}
+          NUGETSTORE__APIKEY: ${{ secrets.NUGETSTORE__APIKEY }}
