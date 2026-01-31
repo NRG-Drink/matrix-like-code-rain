@@ -346,6 +346,7 @@ public class StyleGreenWhite : IMatrixStyle
                 .Append("CTRL+Arrows: Object Generation ");
         }
 
+        _controls.Clear();
         AddStringBuilderAsChars(1, _display.Height - 5, 98, _controlBuilder, _controlColor.AnsiConsoleColor, _controls);
     }
 
