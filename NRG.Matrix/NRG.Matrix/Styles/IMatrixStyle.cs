@@ -2,8 +2,8 @@
 
 public interface IMatrixStyle
 {
-    public Task HandleKeyInput(ConsoleKeyInfo keyInfo);
-    //public Task ApplySettings(IStyleSettings settings);
-    public Task<bool> UpdateInternalObjects();
-    public Task DisplayFrame();
+    public void HandleKeyInput(ConsoleKeyInfo keyInfo);
+    //public void ApplySettings(IStyleSettings settings);
+    public bool UpdateInternalObjects();
+    public void DisplayFrame();
 }

@@ -8,11 +8,15 @@ namespace NRG.Matrix.Styles;
 
 public class StyleGreenWhite : IMatrixStyle
 {
+    private const int MaxShotLength = 30;
+
     public long Frametime { get; set; }
     private readonly ObjectPool<CharDynamic> _charPool = new();
     private readonly ObjectPool<Shot> _shotPool = new();
     private readonly RGB _colorHead = new(220, 220, 250);
     private readonly RGB _colorTail = new(30, 200, 60);
+    // Pre-calculated tail colors to avoid RGB allocations in hot path
+    private readonly RGB[] _tailColors;
     private readonly char[] _greenWhiteChars = [
         .. Alpabeth.LatinUpper,
         .. Alpabeth.Numbers,
@@ -42,6 +46,14 @@ public class StyleGreenWhite : IMatrixStyle
 
     public StyleGreenWhite()
     {
+        // Pre-calculate all possible tail colors to avoid allocations during GenerateShot
+        _tailColors = new RGB[MaxShotLength];
+        _tailColors[0] = _colorHead; // Head color
+        for (var i = 1; i < MaxShotLength; i++)
+        {
+            _tailColors[i] = _colorTail.Luminos(i * 3);
+        }
+
         AddKeyInputHandlers();
         _controls.AddRange(GetControlChars());
         _generateNewTime = _display.Width <= 0
@@ -59,7 +71,7 @@ public class StyleGreenWhite : IMatrixStyle
         _frameTimeHistory.Enqueue(frametime);
     }
 
-    public Task<bool> UpdateInternalObjects()
+    public bool UpdateInternalObjects()
     {
         if (_display.HasResolutionChanged(out var width, out var height))
         {
@@ -69,11 +81,32 @@ public class StyleGreenWhite : IMatrixStyle
         }
 
         var isGenerateNew = _generateNewTime < _generateNewSW.ElapsedMilliseconds;
-        var isFall = _shots.AsValueEnumerable().Any(e => e.IsExpired);
-        var isChar = _chars.AsValueEnumerable().Any(e => e.IsExpired);
+
+        // Check if any shot needs to fall (avoid LINQ allocation)
+        var isFall = false;
+        for (var i = 0; i < _shots.Count; i++)
+        {
+            if (_shots[i].IsExpired)
+            {
+                isFall = true;
+                break;
+            }
+        }
+
+        // Check if any char needs update (avoid LINQ allocation)
+        var isChar = false;
+        for (var i = 0; i < _chars.Count; i++)
+        {
+            if (_chars[i].IsExpired)
+            {
+                isChar = true;
+                break;
+            }
+        }
+
         if (!(isGenerateNew || isFall || isChar))
         {
-            return Task.FromResult(false);
+            return false;
         }
 
         // Generate new shot
@@ -82,19 +115,29 @@ public class StyleGreenWhite : IMatrixStyle
             var shot = GenerateShot(20);
             _shots.Add(shot);
 
-            foreach (var c in shot.Chars.AsValueEnumerable().OfType<CharDynamic>())
+            // Avoid OfType<T>() allocation - we know all chars are CharDynamic
+            var chars = shot.Chars;
+            var charsLength = shot.CharsLength;
+            for (var i = 0; i < charsLength; i++)
             {
-                _chars.Add(c);
+                if (chars[i] is CharDynamic cd)
+                {
+                    _chars.Add(cd);
+                }
             }
 
             _generateNewSW.Restart();
         }
 
-        // Make shots fall
-        foreach (var shot in _shots.AsValueEnumerable().Where(e => e.IsExpired))
+        // Make shots fall (avoid LINQ Where allocation)
+        for (var i = 0; i < _shots.Count; i++)
         {
-            shot.Fall();
-            shot.SW.Restart();
+            var shot = _shots[i];
+            if (shot.IsExpired)
+            {
+                shot.Fall();
+                shot.SW.Restart();
+            }
         }
 
         // Remove shots outside screen - iterate backwards to avoid collection modification issues
@@ -108,26 +151,36 @@ public class StyleGreenWhite : IMatrixStyle
 
             _shots.RemoveAt(i);
             _shotPool.Return(shot);
-            foreach (var charDynamic in shot.Chars.AsValueEnumerable().OfType<CharDynamic>())
+            // Return chars to pool using CharsLength
+            var chars = shot.Chars;
+            var charsLength = shot.CharsLength;
+            for (var j = 0; j < charsLength; j++)
             {
-                _chars.Remove(charDynamic);
-                _charPool.Return(charDynamic);
+                if (chars[j] is CharDynamic charDynamic)
+                {
+                    _chars.Remove(charDynamic);
+                    _charPool.Return(charDynamic);
+                }
             }
         }
 
-        // Update dynamic char
-        foreach (var c in _chars.AsValueEnumerable().Where(e => e.IsExpired))
+        // Update dynamic char (avoid LINQ Where allocation)
+        for (var i = 0; i < _chars.Count; i++)
         {
-            c.PickNewCharIfNeeded();
+            var c = _chars[i];
+            if (c.IsExpired)
+            {
+                c.PickNewCharIfNeeded();
+            }
         }
 
         // Update statistics
         UpdateStatistics();
 
-        return Task.FromResult(true);
+        return true;
     }
 
-    public async Task DisplayFrame()
+    public void DisplayFrame()
     {
         // Reuse collections instead of allocating new ones
         _grouped.Clear();
@@ -144,7 +197,7 @@ public class StyleGreenWhite : IMatrixStyle
             AddToGroupedByMax(_controls);
         }
 
-        await _display.Display(_grouped.Values);
+        _display.Display(_grouped.Values);
     }
 
     private void AddToGroupedByMax(IEnumerable<IAnsiConsoleChar> chars)
@@ -164,26 +217,27 @@ public class StyleGreenWhite : IMatrixStyle
         }
     }
 
-    public Task HandleKeyInput(ConsoleKeyInfo keyInfo)
+    public void HandleKeyInput(ConsoleKeyInfo keyInfo)
     {
         _keyInputHandler.ExecuteFirstMatchingHandler(keyInfo);
-        return Task.CompletedTask;
     }
 
     public Shot GenerateShot(int length = 20)
     {
+        // Clamp length to pre-calculated color array size
+        var actualLength = Math.Min(length, MaxShotLength);
         var x = Random.Shared.Next(0, _display.Width);
         var y = 0;
         var z = (byte)Random.Shared.Next(0, 3);
         var shot = _shotPool.Rent();
-        shot.Init(x, z, y, length, _fallDelay.NumberWithSpread);
+        shot.Init(x, z, y, actualLength, _fallDelay.NumberWithSpread);
 
-        var chars = _charPool.Rent(length);
-        chars[0].Init(shot, _greenWhiteChars, _colorHead, 1000, y--);
-        for (var i = 1; i < length; i++)
+        var chars = _charPool.Rent(actualLength);
+        // Use pre-calculated colors to avoid RGB allocations
+        chars[0].Init(shot, _greenWhiteChars, _tailColors[0], 1000, y--);
+        for (var i = 1; i < actualLength; i++)
         {
-            var color = _colorTail.Luminos(i * 3);
-            chars[i].Init(shot, _greenWhiteChars, color, 500, y--);
+            chars[i].Init(shot, _greenWhiteChars, _tailColors[i], 500, y--);
         }
 
         shot.Chars = chars;
@@ -280,22 +334,30 @@ public class StyleGreenWhite : IMatrixStyle
         long avg = 0, min = 0, max = 0;
         if (_frameTimeHistory.Count > 0)
         {
-            avg = (long)_frameTimeHistory.AsValueEnumerable().Average();
-            min = _frameTimeHistory.AsValueEnumerable().Min();
-            max = _frameTimeHistory.AsValueEnumerable().Max();
+            // Manual calculation to avoid ZLinq allocations
+            long sum = 0;
+            min = long.MaxValue;
+            max = long.MinValue;
+            foreach (var ft in _frameTimeHistory)
+            {
+                sum += ft;
+                if (ft < min) min = ft;
+                if (ft > max) max = ft;
+            }
+            avg = sum / _frameTimeHistory.Count;
         }
 
-        // Use StringBuilder to avoid string allocation
+        // Use StringBuilder with direct append to avoid ToString allocations
         _statisticsBuilder.Clear();
         _statisticsBuilder
-            .Append("Frame time (avg/min/max): ").Append(avg.ToString("000")).Append(" / ").Append(min.ToString("000")).Append(" / ").Append(max.ToString("000")).Append(" ms").Append(Environment.NewLine)
-            .Append("FPS (theo): ").Append((avg > 0 ? (int)(1000 / avg) : 1000).ToString("00000")).Append(" fps").Append(Environment.NewLine)
-            .Append("Shot Count: ").Append(_shots.Count.ToString("00000")).Append(" pcs").Append(Environment.NewLine)
-            .Append("Char Count: ").Append(_chars.Count.ToString("00000")).Append(" pcs").Append(Environment.NewLine)
-            .Append("New Base:   ").Append(_generateNewTimeBase.ToString("00000")).Append(" ms").Append(Environment.NewLine)
-            .Append("Cons Width: ").Append(_display.Width.ToString("00000")).Append(" crs").Append(Environment.NewLine)
-            .Append("New Object: ").Append(_generateNewTime.ToString("00000")).Append(" ms").Append(Environment.NewLine)
-            .Append("Falltime: ").Append(_fallDelay.ToString()).Append(" ms");
+            .Append("Frame time (avg/min/max): ").AppendPadded(avg, 3).Append(" / ").AppendPadded(min, 3).Append(" / ").AppendPadded(max, 3).Append(" ms").Append(Environment.NewLine)
+            .Append("FPS (theo): ").AppendPadded(avg > 0 ? 1000 / avg : 1000, 5).Append(" fps").Append(Environment.NewLine)
+            .Append("Shot Count: ").AppendPadded(_shots.Count, 5).Append(" pcs").Append(Environment.NewLine)
+            .Append("Char Count: ").AppendPadded(_chars.Count, 5).Append(" pcs").Append(Environment.NewLine)
+            .Append("New Base:   ").AppendPadded(_generateNewTimeBase, 5).Append(" ms").Append(Environment.NewLine)
+            .Append("Cons Width: ").AppendPadded(_display.Width, 5).Append(" crs").Append(Environment.NewLine)
+            .Append("New Object: ").AppendPadded(_generateNewTime, 5).Append(" ms").Append(Environment.NewLine)
+            .Append("Falltime: ").Append(_fallDelay.Number).Append('/').Append(_fallDelay.Spread).Append(" ms");
 
         _statistics.AddRange(ToAnsiConsoleChars(1, 1, 99, _statisticsBuilder.ToString(), _statisticColor));
     }
