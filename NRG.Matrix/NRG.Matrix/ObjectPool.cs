@@ -1,6 +1,4 @@
-﻿using System.Buffers;
-
-namespace NRG.Matrix;
+﻿namespace NRG.Matrix;
 
 public class ObjectPool<T> where T : new()
 {
@@ -17,10 +15,8 @@ public class ObjectPool<T> where T : new()
 
     public T[] Rent(int n)
     {
-        // Use ArrayPool for better memory reuse
-        var result = ArrayPool<T>.Shared.Rent(n);
+        var result = new T[n];
 
-        // Initialize objects from pool
         lock (_lock)
         {
             for (var i = 0; i < n; i++)
@@ -38,20 +34,5 @@ public class ObjectPool<T> where T : new()
         {
             _pool.Push(obj);
         }
-    }
-
-    public void ReturnArray(T[] array, int usedLength)
-    {
-        // Return objects to pool
-        lock (_lock)
-        {
-            for (var i = 0; i < usedLength; i++)
-            {
-                _pool.Push(array[i]);
-            }
-        }
-
-        // Return array to ArrayPool
-        ArrayPool<T>.Shared.Return(array, clearArray: true);
     }
 }
