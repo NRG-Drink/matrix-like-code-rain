@@ -144,7 +144,7 @@ public class StyleGreenWhite : IMatrixStyle
             AddToGroupedByMax(_controls);
         }
 
-        await _display.Display(_grouped.Select(e => e.Value));
+        await _display.Display(_grouped.Values);
     }
 
     private void AddToGroupedByMax(IEnumerable<IAnsiConsoleChar> chars)
