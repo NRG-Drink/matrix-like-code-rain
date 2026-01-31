@@ -13,7 +13,14 @@ public class ObjectPool<T> where T : new()
     }
 
     public T[] Rent(int n)
-        => Enumerable.Range(0, n).Select(e => Rent()).ToArray();
+    {
+        var result = new T[n];
+        for (var i = 0; i < n; i++)
+        {
+            result[i] = Rent();
+        }
+        return result;
+    }
 
     public void Return(T obj)
     {

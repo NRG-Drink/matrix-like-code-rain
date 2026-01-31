@@ -72,7 +72,9 @@ public class AnsiConsolePrintAll : IAnsiConsole
             var y = (int)(i / Width);
             if (y != lastY)
             {
-                _sb.Append($"\x1b[{y + 1};1H");
+                _sb.Append("\x1b[")
+                    .Append(y + 1)
+                    .Append(";1H");
                 lastY = y;
             }
 
@@ -85,7 +87,9 @@ public class AnsiConsolePrintAll : IAnsiConsole
 
             if (lastColor != c.AnsiColor)
             {
-                _sb.Append($"\x1b[{c.AnsiColor}m");
+                _sb.Append("\x1b[")
+                    .Append(c.AnsiColor)
+                    .Append('m');
                 lastColor = c.AnsiColor;
             }
 

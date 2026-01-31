@@ -97,17 +97,21 @@ public class StyleGreenWhite : IMatrixStyle
             shot.SW.Restart();
         }
 
-        foreach (var shot in _shots.AsValueEnumerable().Where(e => e.YTop > height))
+        // Remove shots outside screen - iterate backwards to avoid collection modification issues
+        for (var i = _shots.Count - 1; i >= 0; i--)
         {
-            _shots.Remove(shot);
-            _shotPool.Return(shot);
-            foreach (var c in shot.Chars)
+            var shot = _shots[i];
+            if (shot.YTop <= height)
             {
-                if (c is CharDynamic charDynamic)
-                {
-                    _chars.Remove(charDynamic);
-                    _charPool.Return(charDynamic);
-                }
+                continue;
+            }
+
+            _shots.RemoveAt(i);
+            _shotPool.Return(shot);
+            foreach (var charDynamic in shot.Chars.AsValueEnumerable().OfType<CharDynamic>())
+            {
+                _chars.Remove(charDynamic);
+                _charPool.Return(charDynamic);
             }
         }
 
