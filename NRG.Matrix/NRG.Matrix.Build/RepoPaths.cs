@@ -13,6 +13,7 @@ public record RepoPaths
     public required MPFile Solution { get; init; } = new(".");
 
     public List<MPFile> ExeProjects { get; init; } = [];
+    public List<MPFile> ToolProjects { get; init; } = [];
     public List<MPFile> TestProjects { get; init; } = [];
     public List<MPFile> LibraryProjects { get; init; } = [];
     public List<MPFile> WinExeProjects { get; init; } = [];

@@ -10,13 +10,13 @@ using ModularPipelines.FileSystem;
 using ModularPipelines.GitHub.Extensions;
 using ModularPipelines.Models;
 using ModularPipelines.Modules;
-using Octokit;
 using MPFile = ModularPipelines.FileSystem.File;
+using Octokit;
 
 namespace NRG.Matrix.Build.Modules.Releasing;
 
 // TODO: Config upload NuGet, Exe, TestReport
-// TODO: What if zipping or uploading a file fails? (It must proceed)
+// TODO: What if zipping or uploading a file fails? (It should proceed)
 [ModuleCategory(ModuleCategoryKey.UploadReleaseAssets)]
 [RunOnServerOnly]
 [DependsOn<FindRepoPaths>]

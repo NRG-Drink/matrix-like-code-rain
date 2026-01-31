@@ -1,26 +1,28 @@
-﻿//using ISE.Pipeline.Modules.Packing;
-//using Kemartec.Checkliste.Build.Modules.Common;
-//using ModularPipelines.Attributes;
-//using ModularPipelines.Context;
-//using ModularPipelines.Models;
-//using ModularPipelines.Modules;
+﻿using NRG.Matrix.Build.Modules.Packing;
+using ModularPipelines.Attributes;
+using ModularPipelines.Configuration;
+using ModularPipelines.Context;
+using ModularPipelines.Models;
+using ModularPipelines.Modules;
 
-//namespace ISE.Pipeline.Modules.Common;
+namespace NRG.Matrix.Build.Modules.Common;
 
-//[RunOnLocalMachineOnly]
-//[RunOnWindows]
-//[DependsOn<FindRepoPaths>]
-//[DependsOn<PackNuGet>(IgnoreIfNotRegistered = true)]
-//[NotInParallel(nameof(OpenArtifactsFolder))]
-//public class OpenArtifactsFolder : Module<CommandResult>
-//{
-//    protected override Task<bool> ShouldIgnoreFailures(IPipelineContext context, Exception exception)
-//        => Task.FromResult(true);
+[RunOnLocalMachineOnly]
+[RunOnWindows]
+[DependsOn<FindRepoPaths>]
+[DependsOn<PackNuGet>]
+[NotInParallel(nameof(OpenArtifactsFolder))]
+public class OpenArtifactsFolder : Module<CommandResult>
+{
+    protected override ModuleConfiguration Configure()
+        => ModuleConfiguration.Create()
+            .WithIgnoreFailures()
+            .Build();
 
-//    protected override async Task<CommandResult?> ExecuteAsync(IPipelineContext context, CancellationToken cancellationToken)
-//    {
-//        var repoPaths = await GetModule<FindRepoPaths>();
-//        var outDir = repoPaths.Value!.Artifacts;
-//        return await context.Powershell.Script(new("explorer") { Arguments = [outDir.Path] }, cancellationToken);
-//    }
-//}
+    protected override async Task<CommandResult?> ExecuteAsync(IModuleContext context, CancellationToken cancellationToken)
+    {
+        var repoPaths = await context.GetModule<FindRepoPaths>();
+        var outDir = repoPaths.ValueOrDefault!.Artifacts;
+        return await context.Shell.PowerShell.Script(new("explorer") { Arguments = [outDir.Path] }, cancellationToken);
+    }
+}

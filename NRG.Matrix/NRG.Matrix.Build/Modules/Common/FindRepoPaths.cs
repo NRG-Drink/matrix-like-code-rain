@@ -24,7 +24,7 @@ public class FindRepoPaths(IOptions<FindRepoPathSettings> repoPathSettings) : Mo
             ?? throw new ArgumentNullException($"No solution found in '{rootDir}'");
         var projectFiles = solutionFile.Folder!.GetFiles(e => e.Path.EndsWith(".csproj", StringComparison.OrdinalIgnoreCase));
         projectFiles = repoPathSettings.Value.ManipulaeAfterProjectDiscovery(projectFiles);
-        var (exes, libs, winexes, modules, tests, container) = SplitProjects(projectFiles);
+        var (exes, libs, winexes, modules, tests, container, tools) = SplitProjects(projectFiles);
         var isServer = context.GitHub().EnvironmentVariables.CI;
 
         var paths = new RepoPaths()
@@ -34,6 +34,7 @@ public class FindRepoPaths(IOptions<FindRepoPathSettings> repoPathSettings) : Mo
             Solution = solutionFile,
 
             ExeProjects = [.. exes],
+            ToolProjects = [.. tools],
             TestProjects = [.. tests],
             LibraryProjects = [.. libs],
             WinExeProjects = [.. winexes],
@@ -55,9 +56,9 @@ public class FindRepoPaths(IOptions<FindRepoPathSettings> repoPathSettings) : Mo
     }
 
     // Different repo types: https://learn.microsoft.com/en-us/visualstudio/msbuild/common-msbuild-project-properties?view=visualstudio
-    private static (MPFile[], MPFile[], MPFile[], MPFile[], MPFile[], MPFile[]) SplitProjects(IEnumerable<MPFile> projects)
+    private static (MPFile[], MPFile[], MPFile[], MPFile[], MPFile[], MPFile[], MPFile[]) SplitProjects(IEnumerable<MPFile> projects)
     {
-        List<MPFile> exe = [], lib = [], winexe = [], module = [], container = [];
+        List<MPFile> exe = [], lib = [], winexe = [], module = [], container = [], tool = [];
 
         foreach (var e in projects)
         {
@@ -66,6 +67,13 @@ public class FindRepoPaths(IOptions<FindRepoPathSettings> repoPathSettings) : Mo
             if (containerIndex > 1)
             {
                 container.Add(e);
+            }
+
+            var toolIndex = content.IndexOf("<PackAsTool>True</PackAsTool>", StringComparison.OrdinalIgnoreCase);
+            if (toolIndex > -1)
+            {
+                tool.Add(e);
+                continue;
             }
 
             var index = content.IndexOf("<OutputType>");
@@ -96,7 +104,7 @@ public class FindRepoPaths(IOptions<FindRepoPathSettings> repoPathSettings) : Mo
 
         var tests = exe.Where(e => e.NameWithoutExtension.Contains("Tests", StringComparison.OrdinalIgnoreCase));
         var exeWithoutTests = exe.Except(tests);
-        return ([.. exeWithoutTests], [.. lib], [.. winexe], [.. module], [.. tests], [.. container]);
+        return ([.. exeWithoutTests], [.. lib], [.. winexe], [.. module], [.. tests], [.. container], [.. tool]);
     }
 
     private class MyMpFileConterter(string? basePath) : JsonConverter<MPFile>

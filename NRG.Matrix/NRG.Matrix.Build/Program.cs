@@ -7,6 +7,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using ModularPipelines;
 using ModularPipelines.Extensions;
+using Microsoft.Extensions.Hosting;
 
 namespace NRG.Matrix.Build;
 
@@ -17,9 +18,11 @@ internal class Program
         var builder = Pipeline.CreateBuilder();
 
         builder.Configuration
+            .AddJsonFile("appsettings.Production.json", optional: true)
             .AddEnvironmentVariables();
 
         builder.Services.Configure<NuGetSettings>(builder.Configuration.GetSection("NuGet"));
+        builder.Services.Configure<NuGetStoreSettings>(builder.Configuration.GetSection("NuGetStore"));
 
         builder.ConfigureServices((context, collection) =>
         {
@@ -27,7 +30,6 @@ internal class Program
             {
                 s.ManipulateAfterFinish = repo =>
                 {
-                    repo.LibraryProjects.Clear();
                     repo.ExeProjects.RemoveAll(e => e.NameWithoutExtension.EndsWith("Build"));
                 };
             });
@@ -45,9 +47,10 @@ internal class Program
             .AddModule<GitVersion>()
             .AddModule<BuildSolution>()
             .AddModule<RunTests>()
-            .AddModule<Publish>()
+            .AddModule<PackNuGet>()
+            // Server Only
+            .AddModule<UploadNuGetToStore>()
             .AddModule<CreateReleaseGitHub>()
-            .AddModule<UploadReleaseAssetsGitHub>()
             ;
 
         var pipeline = await builder.BuildAsync();

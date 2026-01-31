@@ -5,6 +5,7 @@ using ModularPipelines.Attributes;
 using ModularPipelines.Context;
 using ModularPipelines.DotNet.Extensions;
 using ModularPipelines.DotNet.Options;
+using ModularPipelines.FileSystem;
 using ModularPipelines.Models;
 using ModularPipelines.Modules;
 using MPFile = ModularPipelines.FileSystem.File;
@@ -24,73 +25,69 @@ public class PackNuGet : Module<PathCommandResult<MPFile>[]>
     protected override async Task<PathCommandResult<MPFile>[]?> ExecuteAsync(IModuleContext context, CancellationToken cancellationToken)
     {
         var repoPaths = await context.GetModule<FindRepoPaths>();
-        var outDir = repoPaths.ValueOrDefault!.Artifacts;
-        outDir.Create();
+        var artifacts = repoPaths.ValueOrDefault!.Artifacts;
+        artifacts.Create();
 
         var isRestored = await context.IsSuccessful(context.GetModuleIfRegistered<RestoreSolution>());
         var isBuilt = await context.IsSuccessful(context.GetModuleIfRegistered<BuildSolution>());
 
         var versionModule = await context.GetModule<GitVersion>();
+        var packTemp = Path.Combine(artifacts.Path, $".nuget-pack_{DateTime.Now:yyyy-MM-dd_HHmmss}");
+        Directory.CreateDirectory(packTemp);
         var options = new DotNetPackOptions()
         {
             //NoDependencies = true,
             NoRestore = isRestored || isBuilt,
             NoBuild = isBuilt,
             Configuration = "Release",
-            Output= outDir.Path,
+            //Output = artifacts.Path,
+            Output = packTemp,
             Properties = [
                 ("PackageVersion", versionModule.ValueOrDefault!),
                 ("Version", versionModule.ValueOrDefault!),
             ],
         };
 
-        var results = await repoPaths.ValueOrDefault!.LibraryProjects
+        var toPack = repoPaths.ValueOrDefault!.LibraryProjects
+            .Concat(repoPaths.ValueOrDefault!.ToolProjects)
+            .ToArray();
+
+        var results = await toPack
             .ToAsyncProcessorBuilder()
             .SelectAsync(e =>
                 context.SubModule(
-                    e.NameWithoutExtension, 
-                    () => context.DotNet().Pack(options with { ProjectSolution = e.Path }, 
-                    cancellationToken: cancellationToken)
+                    e.NameWithoutExtension,
+                    () => PackToTempFolder(context, options, e)
                 )
             )
             .ProcessInParallel();
 
-        var start = "Successfully created package '";
-        var end = "'.";
-        return [.. results.Select(e => ExtractNuGetPath(e, start, end))];
+        var res = results.Select(e => GetOutputPath(e, artifacts.Path)).ToArray();
+        Directory.Delete(packTemp, true);
+        return res;
     }
 
-    private static PathCommandResult<MPFile> ExtractNuGetPath(CommandResult e, string start, string end)
+    private PathCommandResult<MPFile> GetOutputPath(PathCommandResult<Folder> r, string outDir)
     {
-        if (!e.StandardOutput.Contains(start) || !e.StandardOutput.Contains(end))
+        var pack = r.Path!.GetFiles("*.nupkg").FirstOrDefault();
+        var packDestination = Path.Combine(outDir, pack!.Name);
+        if (System.IO.File.Exists(packDestination))
         {
-            return new PathCommandResult<MPFile>(null, e);
+            System.IO.File.Delete(packDestination);
         }
 
-        var stout = e.StandardOutput.Trim();
-        var index = stout.IndexOf(start);
-        var filePath = stout[(index + start.Length)..^(end.Length)];
-        var result = new PathCommandResult<MPFile>(new(filePath), e);
-        return result;
+        System.IO.File.Move(pack!.Path, packDestination);
+        Directory.Delete(r.Path!.Path, true);
+
+        return new(packDestination, r.CommandResult);
     }
 
-    private static async Task<CommandResult> PackANuGet(
-        MPFile path,
-        IPipelineContext context,
-        DotNetPackOptions options,
-        CancellationToken cancellationToken)
+    private async Task<PathCommandResult<Folder>> PackToTempFolder(IModuleContext context, DotNetPackOptions options, MPFile toPack)
     {
-        var result = await context.DotNet().Pack(options with { ProjectSolution = path.Path }, cancellationToken: cancellationToken);
-        //var message = $"NuGet Packed for {path.NameWithoutExtension}";
-        //if (result.ExitCode is 0)
-        //{
-        //    context.LogOnPipelineEnd($"✅📦 Successfully {message}");
-        //}
-        //else
-        //{
-        //    context.LogOnPipelineEnd($"❌📦 Failed to {message}");
-        //}
+        var f = new Folder(Path.Combine(options.Output!, Guid.NewGuid().ToString()));
+        var o = options with { ProjectSolution = toPack.Path, Output = f.Path };
+        var result = await context.DotNet().Pack(o);
 
-        return result;
+        return new(f, result);
     }
 }
