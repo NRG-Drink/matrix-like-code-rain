@@ -12,11 +12,11 @@
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <RepositoryUrl>https://github.com/NRG-Drink/matrix-like-code-rain</RepositoryUrl>
     <PackageTags>cmd; matrix; code-rain; falling-code; matrix-digital-rain; digital-rain; matrix-rain; matrix-rain-characters;</PackageTags>
+
     <PackAsTool>True</PackAsTool>
     <ToolCommandName>matrix.enter</ToolCommandName>
     <AssemblyVersion></AssemblyVersion>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
-    <Version>1.2.0-beta.2</Version>
   </PropertyGroup>
 
   <ItemGroup>
