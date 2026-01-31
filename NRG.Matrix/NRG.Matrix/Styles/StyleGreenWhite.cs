@@ -40,7 +40,9 @@ public class StyleGreenWhite : IMatrixStyle
     {
         AddKeyInputHandlers();
         _controls.AddRange(GetControlChars());
-        _generateNewTime = Math.Max(_generateNewTimeBase / _display.Width, 1);
+        _generateNewTime = _display.Width <= 0
+            ? _generateNewTimeBase
+            : Math.Max(_generateNewTimeBase / _display.Width, 1);
     }
 
     public void SetFrametime(long frametime)
