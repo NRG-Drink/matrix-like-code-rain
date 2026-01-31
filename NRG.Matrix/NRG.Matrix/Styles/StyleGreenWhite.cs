@@ -39,6 +39,8 @@ public class StyleGreenWhite : IMatrixStyle
     public StyleGreenWhite()
     {
         AddKeyInputHandlers();
+        _controls.AddRange(GetControlChars());
+        _generateNewTime = Math.Max(_generateNewTimeBase / _display.Width, 1);
     }
 
     public void SetFrametime(long frametime)
