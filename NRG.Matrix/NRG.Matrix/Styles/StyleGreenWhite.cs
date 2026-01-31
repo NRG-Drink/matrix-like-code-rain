@@ -12,6 +12,7 @@ public class StyleGreenWhite : IMatrixStyle
     public long Frametime { get; set; }
     private readonly ObjectPool<CharDynamic> _charPool = new();
     private readonly ObjectPool<Shot> _shotPool = new();
+    private readonly ObjectPool<CharStatic> _charStaticPool = new();
     private readonly RGB _colorHead = new(220, 220, 250);
     private readonly RGB _colorTail = new(30, 200, 60);
     // Pre-calculated tail colors to avoid RGB allocations in hot path
@@ -32,7 +33,7 @@ public class StyleGreenWhite : IMatrixStyle
     private readonly RGB _statisticColor = new(80, 80, 255);
     private readonly RGB _controlColor = new(180, 0, 0);
     private readonly StringBuilder _statisticsBuilder = new();
-    private string? _controlText;
+    private readonly StringBuilder _controlBuilder = new();
 
     private readonly Stopwatch _generateNewSW = Stopwatch.StartNew();
     private NumberWithRandomness _fallDelay = new(225, 175);
@@ -54,7 +55,8 @@ public class StyleGreenWhite : IMatrixStyle
         }
 
         AddKeyInputHandlers();
-        _controls.AddRange(GetControlChars());
+        SetControlChars();
+        //_controls.AddRange(SetControlChars());
         _generateNewTime = _display.Width <= 0
             ? _generateNewTimeBase
             : Math.Max(_generateNewTimeBase / _display.Width, 1);
@@ -75,8 +77,7 @@ public class StyleGreenWhite : IMatrixStyle
         if (_display.HasResolutionChanged(out var width, out var height))
         {
             _generateNewTime = Math.Max(_generateNewTimeBase / width, 1);
-            _controls.Clear();
-            _controls.AddRange(GetControlChars());
+            SetControlChars();
         }
 
         var isGenerateNew = _generateNewTime < _generateNewSW.ElapsedMilliseconds;
@@ -286,49 +287,20 @@ public class StyleGreenWhite : IMatrixStyle
         _generateNewTimeBase = max;
     }
 
-    private IAnsiConsoleChar[] ToAnsiConsoleChars(int x, int y, int z, string text, RGB color)
-    {
-        var lines = text.Split(Environment.NewLine);
-        var ansiColor = color.AnsiConsoleColor;
-
-
-        // Calculate total character count to pre-allocate array
-        var totalChars = 0;
-        for (var i = 0; i < lines.Length; i++)
-        {
-            totalChars += lines[i].Length;
-        }
-
-        var chars = new CharStatic[totalChars];
-        var index = 0;
-
-        for (var i = 0; i < lines.Length; i++)
-        {
-            var lineY = y + i;
-            var line = lines[i];
-            for (var si = 0; si < line.Length; si++)
-            {
-                chars[index++] = new CharStatic()
-                {
-                    Char = line[si],
-                    X = x + si,
-                    Y = lineY,
-                    Z = z,
-                    AnsiColor = ansiColor,
-                };
-            }
-        }
-
-        return chars;
-    }
-
     private void UpdateStatistics()
     {
-        _statistics.Clear();
         if (!_showStatisticsPanel)
         {
             return;
         }
+
+        foreach (var s in _statistics)
+        {
+            _charStaticPool.Return((CharStatic)s);
+        }
+
+        _statistics.Clear();
+        //_statisticsPoolIndex = 0;
 
         long avg = 0, min = 0, max = 0;
         if (_frameTimeHistory.Count > 0)
@@ -358,19 +330,62 @@ public class StyleGreenWhite : IMatrixStyle
             .Append("New Object: ").AppendPadded(_generateNewTime, 5).Append(" ms").Append(Environment.NewLine)
             .Append("Falltime: ").Append(_fallDelay.Number).Append('/').Append(_fallDelay.Spread).Append(" ms");
 
-        _statistics.AddRange(ToAnsiConsoleChars(1, 1, 99, _statisticsBuilder.ToString(), _statisticColor));
+        // Convert StringBuilder to CharStatic objects without allocating new string
+        AddStringBuilderAsChars(1, 1, 99, _statisticsBuilder, _statisticColor.AnsiConsoleColor, _statistics);
     }
 
-
-    private IAnsiConsoleChar[] GetControlChars()
+    private void SetControlChars()
     {
-        _controlText ??= "Controls: " +
-            $"{Environment.NewLine}C: Controls (this)" +
-            $"{Environment.NewLine}S: Show Statistics Panel" +
-            $"{Environment.NewLine}SHIFT+Arrows: Shot Speed" +
-            $"{Environment.NewLine}CTRL+Arrows: Object Generation ";
+        if (_controlBuilder.Length < 2)
+        {
+            _controlBuilder
+                .Append("Controls: ").Append(Environment.NewLine)
+                .Append("C: Controls (this)").Append(Environment.NewLine)
+                .Append("S: Show Statistics Panel").Append(Environment.NewLine)
+                .Append("SHIFT+Arrows: Shot Speed").Append(Environment.NewLine)
+                .Append("CTRL+Arrows: Object Generation ");
+        }
 
-        return ToAnsiConsoleChars(1, _display.Height - 5, 98, _controlText, _controlColor);
+        AddStringBuilderAsChars(1, _display.Height - 5, 98, _controlBuilder, _controlColor.AnsiConsoleColor, _controls);
+    }
+
+    /// <summary>
+    /// Converts StringBuilder content to CharStatic objects without allocating a string.
+    /// Reuses pooled CharStatic objects to avoid per-frame allocations.
+    /// </summary>
+    private void AddStringBuilderAsChars(int x, int y, int z, StringBuilder sb, string ansiColor, List<IAnsiConsoleChar> target)
+    {
+        var currentX = x;
+        var currentY = y;
+
+        for (var i = 0; i < sb.Length; i++)
+        {
+            var c = sb[i];
+
+            // Handle newlines
+            if (c == '\r')
+            {
+                continue; // Skip carriage return
+            }
+            if (c == '\n')
+            {
+                currentY++;
+                currentX = x;
+                continue;
+            }
+
+            var charStatic = _charStaticPool.Rent();
+
+            // Update the pooled object
+            charStatic.Char = c;
+            charStatic.X = currentX;
+            charStatic.Y = currentY;
+            charStatic.Z = z;
+            charStatic.AnsiColor = ansiColor;
+
+            target.Add(charStatic);
+            currentX++;
+        }
     }
 
     private readonly record struct XY(int X, int Y);
