@@ -29,7 +29,7 @@ public class StyleGreenWhite : IMatrixStyle
     private readonly Stopwatch _generateNewSW = Stopwatch.StartNew();
     private NumberWithRandomness _fallDelay = new(225, 175);
     private int _generateNewTimeBase = 20000;
-    private int _generateNewTime = 20000;
+    private int _generateNewTime;
     private bool _showStatisticsPanel = false;
     private bool _showControlsPanel = false;
     private readonly Queue<long> _frameTimeHistory = [];
@@ -38,6 +38,7 @@ public class StyleGreenWhite : IMatrixStyle
 
     public StyleGreenWhite()
     {
+        _generateNewTime = _generateNewTimeBase;
         AddKeyInputHandlers();
     }
 
