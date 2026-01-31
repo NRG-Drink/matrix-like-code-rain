@@ -1,6 +1,8 @@
 ﻿using NRG.Matrix.Displays;
 using NRG.Matrix.Models;
 using System.Diagnostics;
+using System.Text;
+using ZLinq;
 
 namespace NRG.Matrix.Styles;
 
@@ -21,10 +23,13 @@ public class StyleGreenWhite : IMatrixStyle
     private readonly AnsiConsolePrintAll _display = new();
     private readonly List<Shot> _shots = [];
     private readonly List<CharDynamic> _chars = [];
+    private readonly Dictionary<XY, IAnsiConsoleChar> _grouped = [];
     private readonly List<IAnsiConsoleChar> _statistics = [];
     private readonly List<IAnsiConsoleChar> _controls = [];
     private readonly RGB _statisticColor = new(80, 80, 255);
     private readonly RGB _controlColor = new(180, 0, 0);
+    private readonly StringBuilder _statisticsBuilder = new();
+    private string? _controlText;
 
     private readonly Stopwatch _generateNewSW = Stopwatch.StartNew();
     private NumberWithRandomness _fallDelay = new(225, 175);
@@ -33,8 +38,7 @@ public class StyleGreenWhite : IMatrixStyle
     private bool _showStatisticsPanel = false;
     private bool _showControlsPanel = false;
     private readonly Queue<long> _frameTimeHistory = [];
-
-    private readonly KeyInputHandler _keyInputHandler = new KeyInputHandler();
+    private readonly KeyInputHandler _keyInputHandler = new();
 
     public StyleGreenWhite()
     {
@@ -65,8 +69,8 @@ public class StyleGreenWhite : IMatrixStyle
         }
 
         var isGenerateNew = _generateNewTime < _generateNewSW.ElapsedMilliseconds;
-        var isFall = _shots.Any(e => e.IsExpired);
-        var isChar = _chars.Any(e => e.IsExpired);
+        var isFall = _shots.AsValueEnumerable().Any(e => e.IsExpired);
+        var isChar = _chars.AsValueEnumerable().Any(e => e.IsExpired);
         if (!(isGenerateNew || isFall || isChar))
         {
             return Task.FromResult(false);
@@ -77,32 +81,38 @@ public class StyleGreenWhite : IMatrixStyle
         {
             var shot = GenerateShot(20);
             _shots.Add(shot);
-            _chars.AddRange(shot.Chars.OfType<CharDynamic>());
+
+            foreach (var c in shot.Chars.AsValueEnumerable().OfType<CharDynamic>())
+            {
+                _chars.Add(c);
+            }
+
             _generateNewSW.Restart();
         }
 
         // Make shots fall
-        foreach (var shot in _shots.Where(e => e.IsExpired))
+        foreach (var shot in _shots.AsValueEnumerable().Where(e => e.IsExpired))
         {
             shot.Fall();
             shot.SW.Restart();
         }
 
-        // Remove shots outside screen
-        var shotsToRemove = _shots.Where(e => e.YTop > height).ToArray();
-        foreach (var shot in shotsToRemove)
+        foreach (var shot in _shots.AsValueEnumerable().Where(e => e.YTop > height))
         {
             _shots.Remove(shot);
             _shotPool.Return(shot);
-            foreach (var c in shot.Chars.OfType<CharDynamic>())
+            foreach (var c in shot.Chars)
             {
-                _chars.Remove(c);
-                _charPool.Return(c);
+                if (c is CharDynamic charDynamic)
+                {
+                    _chars.Remove(charDynamic);
+                    _charPool.Return(charDynamic);
+                }
             }
         }
 
         // Update dynamic char
-        foreach (var c in _chars.Where(e => e.IsExpired))
+        foreach (var c in _chars.AsValueEnumerable().Where(e => e.IsExpired))
         {
             c.PickNewCharIfNeeded();
         }
@@ -115,35 +125,39 @@ public class StyleGreenWhite : IMatrixStyle
 
     public async Task DisplayFrame()
     {
-        var grouped = new Dictionary<XY, List<IAnsiConsoleChar>>();
+        // Reuse collections instead of allocating new ones
+        _grouped.Clear();
 
-        IEnumerable<IAnsiConsoleChar> chars = _chars;
+        AddToGroupedByMax(_chars);
+
         if (_showStatisticsPanel)
         {
-            chars = chars.Concat(_statistics);
+            AddToGroupedByMax(_statistics);
         }
 
         if (_showControlsPanel)
         {
-            chars = chars.Concat(_controls);
+            AddToGroupedByMax(_controls);
         }
 
+        await _display.Display(_grouped.Select(e => e.Value));
+    }
+
+    private void AddToGroupedByMax(IEnumerable<IAnsiConsoleChar> chars)
+    {
         foreach (var c in chars)
         {
             var xy = new XY(c.X, c.Y);
-            if (grouped.TryGetValue(xy, out var list) && list is not null)
+            if (_grouped.TryGetValue(xy, out var val))
             {
-                list.Add(c);
-                continue;
+                if (c.Z <= val.Z)
+                {
+                    continue;
+                }
             }
 
-            grouped.Add(xy, [c]);
+            _grouped[xy] = c;
         }
-
-        // The highest Z value per point will be displayed.
-        var ordered = grouped.Select(e => e.Value.OrderByDescending(e => e.Z).First());
-
-        await _display.Display(ordered);
     }
 
     public Task HandleKeyInput(ConsoleKeyInfo keyInfo)
@@ -213,27 +227,42 @@ public class StyleGreenWhite : IMatrixStyle
         }
 
         _generateNewTimeBase = max;
-
     }
 
     private IAnsiConsoleChar[] ToAnsiConsoleChars(int x, int y, int z, string text, RGB color)
     {
-        var chars = new List<IAnsiConsoleChar>();
         var lines = text.Split(Environment.NewLine);
+        var ansiColor = color.AnsiConsoleColor;
+
+
+        // Calculate total character count to pre-allocate array
+        var totalChars = 0;
         for (var i = 0; i < lines.Length; i++)
         {
-            var line = lines[i].Select((e, si) => new CharStatic()
-            {
-                Char = e,
-                X = x + si,
-                Y = y + i,
-                Z = z,
-                AnsiColor = color.AnsiConsoleColor,
-            });
-            chars.AddRange(line);
+            totalChars += lines[i].Length;
         }
 
-        return [.. chars];
+        var chars = new CharStatic[totalChars];
+        var index = 0;
+
+        for (var i = 0; i < lines.Length; i++)
+        {
+            var lineY = y + i;
+            var line = lines[i];
+            for (var si = 0; si < line.Length; si++)
+            {
+                chars[index++] = new CharStatic()
+                {
+                    Char = line[si],
+                    X = x + si,
+                    Y = lineY,
+                    Z = z,
+                    AnsiColor = ansiColor,
+                };
+            }
+        }
+
+        return chars;
     }
 
     private void UpdateStatistics()
@@ -244,37 +273,39 @@ public class StyleGreenWhite : IMatrixStyle
             return;
         }
 
-
         long avg = 0, min = 0, max = 0;
         if (_frameTimeHistory.Count > 0)
         {
-            avg = (long)_frameTimeHistory.Average();
-            min = _frameTimeHistory.Min();
-            max = _frameTimeHistory.Max();
+            avg = (long)_frameTimeHistory.AsValueEnumerable().Average();
+            min = _frameTimeHistory.AsValueEnumerable().Min();
+            max = _frameTimeHistory.AsValueEnumerable().Max();
         }
 
-        var n = Environment.NewLine;
-        var statisticsText =
-            $"Frame time (avg/min/max): {avg:000} / {min:000} / {max:000} ms" +
-            $"{n}FPS (theo): {(avg > 0 ? (int)(1000 / avg) : 1000):00000} fps" +
-            $"{n}Shot Count: {_shots.Count:00000} pcs" +
-            $"{n}Char Count: {_chars.Count:00000} pcs" +
-            $"{n}New Base:   {_generateNewTimeBase:00000} ms" +
-            $"{n}Cons Width: {Console.BufferWidth:00000} crs" +
-            $"{n}New Object: {_generateNewTime:00000} ms" +
-            $"{n}Falltime: {_fallDelay} ms";
-        _statistics.AddRange(ToAnsiConsoleChars(1, 1, 99, statisticsText, _statisticColor));
+        // Use StringBuilder to avoid string allocation
+        _statisticsBuilder.Clear();
+        _statisticsBuilder
+            .Append("Frame time (avg/min/max): ").Append(avg.ToString("000")).Append(" / ").Append(min.ToString("000")).Append(" / ").Append(max.ToString("000")).Append(" ms").Append(Environment.NewLine)
+            .Append("FPS (theo): ").Append((avg > 0 ? (int)(1000 / avg) : 1000).ToString("00000")).Append(" fps").Append(Environment.NewLine)
+            .Append("Shot Count: ").Append(_shots.Count.ToString("00000")).Append(" pcs").Append(Environment.NewLine)
+            .Append("Char Count: ").Append(_chars.Count.ToString("00000")).Append(" pcs").Append(Environment.NewLine)
+            .Append("New Base:   ").Append(_generateNewTimeBase.ToString("00000")).Append(" ms").Append(Environment.NewLine)
+            .Append("Cons Width: ").Append(_display.Width.ToString("00000")).Append(" crs").Append(Environment.NewLine)
+            .Append("New Object: ").Append(_generateNewTime.ToString("00000")).Append(" ms").Append(Environment.NewLine)
+            .Append("Falltime: ").Append(_fallDelay.ToString()).Append(" ms");
+
+        _statistics.AddRange(ToAnsiConsoleChars(1, 1, 99, _statisticsBuilder.ToString(), _statisticColor));
     }
+
 
     private IAnsiConsoleChar[] GetControlChars()
     {
-        var controlText = $"Controls: " +
+        _controlText ??= "Controls: " +
             $"{Environment.NewLine}C: Controls (this)" +
             $"{Environment.NewLine}S: Show Statistics Panel" +
             $"{Environment.NewLine}SHIFT+Arrows: Shot Speed" +
             $"{Environment.NewLine}CTRL+Arrows: Object Generation ";
 
-        return ToAnsiConsoleChars(1, _display.Height - 5, 98, controlText, _controlColor);
+        return ToAnsiConsoleChars(1, _display.Height - 5, 98, _controlText, _controlColor);
     }
 
     private readonly record struct XY(int X, int Y);
