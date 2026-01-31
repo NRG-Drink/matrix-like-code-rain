@@ -43,14 +43,14 @@ internal class Program
         });
 
         builder
-            .AddModule<FindRepoPaths>()
+            //.AddModule<FindRepoPaths>()
             .AddModule<GitVersion>()
-            .AddModule<BuildSolution>()
-            .AddModule<RunTests>()
-            .AddModule<PackNuGet>()
+            //.AddModule<BuildSolution>()
+            //.AddModule<RunTests>()
+            //.AddModule<PackNuGet>()
             // Server Only
-            .AddModule<UploadNuGetToStore>()
-            .AddModule<CreateReleaseGitHub>()
+            //.AddModule<UploadNuGetToStore>()
+            //.AddModule<CreateReleaseGitHub>()
             ;
 
         var pipeline = await builder.BuildAsync();
