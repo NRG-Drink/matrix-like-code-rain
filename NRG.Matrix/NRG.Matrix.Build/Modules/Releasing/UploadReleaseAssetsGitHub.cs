@@ -64,8 +64,8 @@ public class UploadReleaseAssetsGitHub : Module<ReleaseAsset[]>
             zipFolders = [.. folders];
         }
 
-        var releaseModul = await context.GetModule<CreateReleaseGitHub>();
-        var release = releaseModul.ValueOrDefault!;
+        var releaseModule = await context.GetModule<CreateReleaseGitHub>();
+        var release = releaseModule.ValueOrDefault!;
         var fileResults = await zipFiles
             .ToAsyncProcessorBuilder()
             .SelectAsync(e => context.SubModule(e.Name, async () =>

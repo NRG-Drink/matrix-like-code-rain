@@ -24,7 +24,7 @@ public class AppendTestReportToGitHubSummary : Module<bool>
         {
             var summaryPath = context.Environment.Variables.GetEnvironmentVariable(GitHubStepSummaryEnvironmentVariable);
             return summaryPath is null
-                ? SkipDecision.Skip($"No Environmentvariable '{GitHubStepSummaryEnvironmentVariable}'")
+                ? SkipDecision.Skip($"No environment variable '{GitHubStepSummaryEnvironmentVariable}'")
                 : SkipDecision.DoNotSkip;
         })
         .Build();

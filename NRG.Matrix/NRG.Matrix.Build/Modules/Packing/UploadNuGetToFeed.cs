@@ -60,14 +60,4 @@ public class UploadNuGetToFeed(IOptions<NuGetSettings> nugetSettings) : Module<C
 
         return results;
     }
-
-    private static async Task<CommandResult> PushNuGet(
-        MPFile path,
-        IPipelineContext context,
-        DotNetNugetPushOptions options,
-        CancellationToken cancellationToken)
-    {
-        CommandResult result = await context.DotNet().Nuget.Push(options with { Path = path.Path }, cancellationToken: cancellationToken);
-        return result;
-    }
 }

@@ -5,7 +5,7 @@ public record RunTestsOptions
     public bool Coverage { get; set; }
     public string CoverageOutputFormat { get; set; } = "cobertura";
     public string? TreenodeFilter { get; set; } = "/*/*/*/*[Category!=NotRunInPipeline]";
-    public string? ResultsDirecotry { get; set; }
+    public string? ResultsDirectory { get; set; }
     public List<string> Arguments { get; set; } = [];
 
     public List<string> ToArguments()
@@ -28,10 +28,10 @@ public record RunTestsOptions
             args.Add(TreenodeFilter);
         }
 
-        if (ResultsDirecotry is not null)
+        if (ResultsDirectory is not null)
         {
             args.Add("--results-directory");
-            args.Add(ResultsDirecotry);
+            args.Add(ResultsDirectory);
         }
 
         if (Arguments.Count != 0)

@@ -23,7 +23,7 @@ public class FindRepoPaths(IOptions<FindRepoPathSettings> repoPathSettings) : Mo
             .FirstOrDefault()
             ?? throw new ArgumentNullException($"No solution found in '{rootDir}'");
         var projectFiles = solutionFile.Folder!.GetFiles(e => e.Path.EndsWith(".csproj", StringComparison.OrdinalIgnoreCase));
-        projectFiles = repoPathSettings.Value.ManipulaeAfterProjectDiscovery(projectFiles);
+        projectFiles = repoPathSettings.Value.ManipulateAfterProjectDiscovery(projectFiles);
         var (exes, libs, winexes, modules, tests, container, tools) = SplitProjects(projectFiles);
         var isServer = context.GitHub().EnvironmentVariables.CI;
 
@@ -47,8 +47,8 @@ public class FindRepoPaths(IOptions<FindRepoPathSettings> repoPathSettings) : Mo
         {
             WriteIndented = true,
         };
-        options.Converters.Add(new MyMpFileConterter(paths.Repo.Parent?.Path));
-        options.Converters.Add(new MyMpFolderConterter(paths.Repo.Parent?.Path));
+        options.Converters.Add(new MyMpFileConverter(paths.Repo.Parent?.Path));
+        options.Converters.Add(new MyMpFolderConverter(paths.Repo.Parent?.Path));
         var json = JsonSerializer.Serialize(paths, options);
         context.Logger.LogInformation("RepoPaths:\n{Json}", json);
 
@@ -107,14 +107,14 @@ public class FindRepoPaths(IOptions<FindRepoPathSettings> repoPathSettings) : Mo
         return ([.. exeWithoutTests], [.. lib], [.. winexe], [.. module], [.. tests], [.. container], [.. tool]);
     }
 
-    private class MyMpFileConterter(string? basePath) : JsonConverter<MPFile>
+    private class MyMpFileConverter(string? basePath) : JsonConverter<MPFile>
     {
         public override MPFile? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options) => throw new NotImplementedException();
         public override void Write(Utf8JsonWriter writer, MPFile value, JsonSerializerOptions options)
             => writer.WriteStringValue(Path.GetRelativePath(basePath ?? ".", value.Path));
     }
 
-    private class MyMpFolderConterter(string? basePath) : JsonConverter<Folder>
+    private class MyMpFolderConverter(string? basePath) : JsonConverter<Folder>
     {
         public override Folder? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options) => throw new NotImplementedException();
         public override void Write(Utf8JsonWriter writer, Folder value, JsonSerializerOptions options)

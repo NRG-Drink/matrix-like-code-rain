@@ -65,25 +65,4 @@ public class Publish : Module<PathCommandResult<Folder>[]>
             })
             .ToArray();
     }
-
-    private static async Task<CommandResult> PublishExe(
-        MPFile path,
-        string outDir,
-        IPipelineContext context,
-        DotNetPublishOptions options,
-        CancellationToken cancellationToken)
-    {
-        var result = await context.DotNet().Publish(options with { ProjectSolution = path.Path, Output= outDir }, cancellationToken: cancellationToken);
-        //var message = $"Exe Created for {path.NameWithoutExtension}";
-        //if (result.ExitCode is 0)
-        //{
-        //    context.LogOnPipelineEnd($"✅💾 Successfully {message}");
-        //}
-        //else
-        //{
-        //    context.LogOnPipelineEnd($"❌💾 Failed to {message}");
-        //}
-
-        return result;
-    }
 }

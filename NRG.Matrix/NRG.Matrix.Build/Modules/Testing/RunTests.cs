@@ -28,7 +28,7 @@ public class RunTests(IOptions<RunTestsSettings> testSettings) : Module<CommandR
             Coverage = true,
             CoverageOutputFormat = "cobertura",
             TreenodeFilter = "/*/*/*/*[Category!=NotRunInPipeline]",
-            ResultsDirecotry = repoPaths.ValueOrDefault!.TestResultsData.Path,
+            ResultsDirectory = repoPaths.ValueOrDefault!.TestResultsData.Path,
             Arguments = [],
         };
 

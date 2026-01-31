@@ -35,7 +35,6 @@ public class CreateReleaseGitHub : Module<Release>
             TargetCommitish = context.Git().Information.LastCommitSha,
         };
 
-        var result = new Release();
         if (long.TryParse(gitHub.EnvironmentVariables.RepositoryId, out var repoIdLong))
         {
             return await gitHub.Client.Repository.Release.Create(repoIdLong, release);
